@@ -1,0 +1,87 @@
+# Dependencias
+/node_modules
+/.pnp
+.pnp.js
+
+# Pruebas
+/coverage
+
+# Producción
+/build
+
+# Variables de entorno
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor - VS Code
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Editor - WebStorm/IntelliJ
+.idea/
+
+# macOS específico
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Directorios de macOS
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Archivos de red de macOS
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows específico
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Carpetas de Windows
+$RECYCLE.BIN/
+
+# Archivos de sistema de Windows
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Archivos de configuración temporal
+.env.backup
+.env.*.backup
+
+# Archivos de análisis
+bundle-analyzer-report.html
+
+# ESLint cache
+.eslintcache
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Parcel cache
+.cache
+.parcel-cache
