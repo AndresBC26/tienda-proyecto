@@ -3,55 +3,55 @@
 
 export const brandConfig = {
   // INFORMACIÓN BÁSICA DE LA MARCA
-  name: 'InnoVibe', // Reemplazar con tu nombre
-  slogan: 'Tu idea, nuestra vibra.', // Reemplazar con tu slogan
+  name: 'Elegancia Urban', // Nombre actualizado
+  slogan: 'El arte de vestir la ciudad.', // Slogan actualizado
 
   // LOGO E IMÁGENES
   logo: {
-    icon: '🛍️', // Emoji temporal (puedes cambiarlo)
-    url: 'https://innovibe.org/', // Si tienes logo, poner ruta aquí
-    alt: 'InnoVibe', // Texto alternativo
+    icon: '🔥', // Emoji representativo
+    url: '/', // Enlace al inicio
+    alt: 'Logo de Elegancia Urban', // Texto alternativo
   },
 
   // INFORMACIÓN DE CONTACTO
   contact: {
-    email: 'estebanleal547@gmail.com', // Tu email (real o simulado)
-    phone: '+57 (320) 397-3733', // Tu teléfono (real o simulado)
-    whatsapp: '+573203973733', // WhatsApp sin espacios ni símbolos
+    email: 'soporte@eleganciaurban.com', // Email de la tienda
+    phone: '+57 (321) 123-4567', // Teléfono de la tienda
+    whatsapp: '+573211234567', // WhatsApp sin espacios ni símbolos
     address: {
-      street: 'Calle Principal #3-14',
-      city: 'Garzón-Huila',
+      street: 'Avenida Siempre Viva #12-34',
+      city: 'Bogotá D.C.',
       country: 'Colombia',
-      zipCode: '414020',
+      zipCode: '110111',
     },
   },
 
-  // REDES SOCIALES
+  // REDES SOCIALES (con placeholders)
   social: {
-    facebook: 'https://facebook.com/tunombre',
-    instagram: 'https://instagram.com/tunombre',
-    twitter: 'https://twitter.com/tunombre',
-    linkedin: 'https://linkedin.com/company/tunombre',
+    facebook: 'https://facebook.com/eleganciaurban',
+    instagram: 'https://instagram.com/eleganciaurban',
+    twitter: 'https://twitter.com/eleganciaurban',
+    linkedin: 'https://linkedin.com/company/eleganciaurban',
   },
 
   // INFORMACIÓN EMPRESARIAL
   company: {
-    foundedYear: 2024,
+    foundedYear: 2022,
     description:
-      'InnoVibe es una empresa enfocada en la creación de soluciones tecnológicas y creativas que conectan la innovación con las personas. Nos especializamos en transformar ideas en realidades tangibles, combinando estrategia, diseño y tecnología para generar experiencias modernas, eficientes y con impacto. Nuestro enfoque es ser aliados de emprendedores, empresas y organizaciones que buscan crecer y diferenciarse en un mundo digital en constante evolución.',
+      'Elegancia Urban es una marca de moda enfocada en camisetas con diseños urbanos y contemporáneos. Creemos que la ropa es una forma de expresión personal y ofrecemos prendas de alta calidad que reflejan las últimas tendencias de la cultura urbana.',
     mission:
-      'Impulsar el crecimiento de personas y empresas a través de soluciones innovadoras y accesibles, que integren creatividad, tecnología y estrategia, ofreciendo un acompañamiento cercano donde cada idea encuentre su vibra y se convierta en resultados reales.',
+      'Ofrecer diseños de camisetas únicos y de calidad premium que permitan a nuestros clientes expresar su estilo individual y sentirse seguros en cualquier entorno urbano.',
     vision:
-      'Ser reconocidos en el 2030 como una empresa líder en innovación y desarrollo tecnológico a nivel regional y global, destacándonos por nuestra capacidad de vibrar con las ideas de nuestros clientes y convertirlas en proyectos sostenibles, creativos y con impacto positivo en la sociedad.',
-    values: ['Calidad excepcional', 'Servicio al cliente', 'Innovación constante'],
+      'Ser la marca líder de moda urbana en Colombia para 2028, reconocida por nuestra creatividad, calidad y por construir una comunidad apasionada por el estilo y la autoexpresión.',
+    values: ['Calidad Excepcional', 'Creatividad Constante', 'Comunidad Auténtica'],
   },
 
   // CONFIGURACIÓN DE NEGOCIO
   business: {
-    currency: 'USD',
-    freeShippingThreshold: 100, // Envío gratis desde este monto
+    currency: 'COP',
+    freeShippingThreshold: 150000, // Envío gratis desde $150.000 COP
     returnDays: 30, // Días para devoluciones
-    warrantyYears: 2, // Años de garantía
-    supportHours: 'Lun - Vie: 9AM - 6PM',
+    warrantyYears: 1, // Año de garantía
+    supportHours: 'Lun - Sab: 9AM - 7PM',
   },
 };

@@ -1,26 +1,31 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+// src/contexts/CartContext.tsx
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { Product } from '../hooks/useProducts';
+import { useAuth } from './AuthContext';
+import axios from 'axios';
 
-// Extendemos Product para incluir cantidad
-interface CartItem extends Product {
-  quantity: number; // Cuántos productos del mismo tipo
+// ✅ SOLUCIÓN CORRECTA PARA CREATE REACT APP
+const API_URL = `${process.env.REACT_APP_API_URL}/api`;
+
+export interface CartItem extends Product {
+  quantity: number;
+  selectedSize: string;
+  cartItemId: string; 
 }
 
-// Estado del carrito
 interface CartState {
-  items: CartItem[]; // Productos en el carrito
-  total: number; // Precio total
-  itemCount: number; // Cantidad total de productos
+  items: CartItem[];
+  total: number;
+  itemCount: number;
 }
 
-// Acciones que puede hacer el carrito
 type CartAction =
-  | { type: 'ADD_TO_CART'; payload: Product } // Agregar producto
-  | { type: 'REMOVE_FROM_CART'; payload: number } // Eliminar por ID
-  | { type: 'UPDATE_QUANTITY'; payload: { id: number; quantity: number } } // Cambiar cantidad
-  | { type: 'CLEAR_CART' }; // Vaciar carrito
+  | { type: 'SET_CART'; payload: CartItem[] }
+  | { type: 'ADD_PRODUCTS_TO_CART'; payload: { product: Product; quantity: number; size: string } }
+  | { type: 'REMOVE_FROM_CART'; payload: { cartItemId: string } }
+  | { type: 'UPDATE_QUANTITY'; payload: { cartItemId: string; quantity: number } }
+  | { type: 'CLEAR_CART' };
 
-// Crear el contexto
 const CartContext = createContext<
   | {
       state: CartState;
@@ -29,83 +34,134 @@ const CartContext = createContext<
   | undefined
 >(undefined);
 
-// Reducer: función que maneja los cambios del estado
 const cartReducer = (state: CartState, action: CartAction): CartState => {
+  let newItems: CartItem[] = [...state.items];
   switch (action.type) {
-    case 'ADD_TO_CART': {
-      // Buscar si el producto ya existe en el carrito
-      const existingItem = state.items.find(item => item.id === action.payload.id);
-      let newItems: CartItem[];
-
+    case 'SET_CART':
+      newItems = action.payload;
+      break;
+    case 'ADD_PRODUCTS_TO_CART': {
+      const { product, quantity, size } = action.payload;
+      const cartItemId = `${product._id}-${size}`;
+      const existingItem = state.items.find(item => item.cartItemId === cartItemId);
+      const sizeInfo = product.sizes.find(s => s.size === size);
+      const availableStock = sizeInfo ? sizeInfo.stock : 0;
       if (existingItem) {
-        // Si existe, aumentar cantidad
+        const newQuantity = Math.min(existingItem.quantity + quantity, availableStock);
         newItems = state.items.map(item =>
-          item.id === action.payload.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.cartItemId === cartItemId ? { ...item, quantity: newQuantity } : item
         );
       } else {
-        // Si no existe, agregar nuevo con cantidad 1
-        newItems = [...state.items, { ...action.payload, quantity: 1 }];
+        const newQuantity = Math.min(quantity, availableStock);
+        if (newQuantity > 0) {
+            newItems = [...state.items, { ...product, quantity: newQuantity, selectedSize: size, cartItemId }];
+        }
       }
-
-      // Recalcular total y contador
-      return {
-        ...state,
-        items: newItems,
-        total: newItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
-      };
+      break;
     }
-
     case 'REMOVE_FROM_CART': {
-      // Filtrar para eliminar el producto
-      const newItems = state.items.filter(item => item.id !== action.payload);
-      return {
-        ...state,
-        items: newItems,
-        total: newItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
-      };
+      newItems = state.items.filter(item => item.cartItemId !== action.payload.cartItemId);
+      break;
     }
-
     case 'UPDATE_QUANTITY': {
-      // Actualizar cantidad específica
-      const newItems = state.items
-        .map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: Math.max(0, action.payload.quantity) }
-            : item
-        )
-        .filter(item => item.quantity > 0); // Eliminar si cantidad es 0
-
-      return {
-        ...state,
-        items: newItems,
-        total: newItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
-        itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
-      };
+        const { cartItemId, quantity } = action.payload;
+        const itemToUpdate = state.items.find(item => item.cartItemId === cartItemId);
+        if (!itemToUpdate) return state;
+        const sizeInfo = itemToUpdate.sizes.find(s => s.size === itemToUpdate.selectedSize);
+        const availableStock = sizeInfo ? sizeInfo.stock : 0;
+        const newQuantity = Math.min(Math.max(0, quantity), availableStock);
+        newItems = state.items
+            .map(item =>
+            item.cartItemId === cartItemId
+                ? { ...item, quantity: newQuantity }
+                : item
+            )
+            .filter(item => item.quantity > 0);
+        break;
     }
-
     case 'CLEAR_CART':
-      // Vaciar completamente el carrito
-      return { items: [], total: 0, itemCount: 0 };
-
+      newItems = [];
+      break;
     default:
       return state;
   }
+  
+  const newState = {
+    ...state,
+    items: newItems,
+    total: newItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0),
+  };
+  return newState;
 };
 
-// Proveedor del contexto (envuelve toda la app)
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, {
-    items: [],
-    total: 0,
-    itemCount: 0,
-  });
+  const { isAuthenticated, user, setCartDispatch } = useAuth();
+  const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0, itemCount: 0 });
 
-  return <CartContext.Provider value={{ state, dispatch }}>{children}</CartContext.Provider>;
+  useEffect(() => {
+    if (setCartDispatch) {
+        setCartDispatch(dispatch);
+    }
+  }, [setCartDispatch]);
+
+  useEffect(() => {
+    const fetchCart = async () => {
+      if (isAuthenticated && user) {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await axios.get(`${API_URL}/users/${user._id}/cart`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const cartFromDB = res.data.cart.map((item: any) => ({
+              ...item.product,
+              quantity: item.quantity,
+              selectedSize: item.selectedSize,
+              cartItemId: `${item.product._id}-${item.selectedSize}`
+          }));
+          dispatch({ type: 'SET_CART', payload: cartFromDB });
+        } catch (error) {
+          console.error("Error al cargar el carrito del usuario:", error);
+        }
+      } else {
+        dispatch({ type: 'CLEAR_CART' });
+      }
+    };
+    fetchCart();
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    const syncCart = async () => {
+        if(isAuthenticated && user) {
+            try {
+                const token = localStorage.getItem('token');
+                const cartToSync = state.items.map(item => ({
+                    product: item._id,
+                    quantity: item.quantity,
+                    selectedSize: item.selectedSize
+                }));
+
+                await axios.put(`${API_URL}/users/${user._id}/cart`, 
+                    { cart: cartToSync },
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+            } catch (error) {
+                console.error("Error al sincronizar el carrito con el servidor:", error);
+            }
+        }
+    };
+    if (state.items.length > 0 || !isAuthenticated) {
+        syncCart();
+    }
+  }, [state, isAuthenticated, user]);
+
+  return (
+    <CartContext.Provider value={{ state, dispatch }}>
+      {children}
+    </CartContext.Provider>
+  );
 };
 
-// Hook personalizado para usar el carrito
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
@@ -113,6 +169,3 @@ export const useCart = () => {
   }
   return context;
 };
-
-// Exportar tipos para usar en otros archivos
-export type { CartItem };

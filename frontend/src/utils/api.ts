@@ -1,10 +1,17 @@
+// src/utils/api.ts
 import axios from 'axios';
 
-// Configuración centralizada de Axios
-// Si cambias la URL del backend, solo cambias aquí
+// ✅ CÓDIGO CORREGIDO PARA VITE
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
+
+if (!API_BASE_URL) {
+  throw new Error("La variable de entorno VITE_API_URL no está definida. Revisa tu archivo .env");
+}
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // URL base del backend
-  timeout: 10000, // 10 segundos de timeout
+  baseURL: `${API_BASE_URL}/api`,
+  timeout: 10000,
 });
 
 export default api;

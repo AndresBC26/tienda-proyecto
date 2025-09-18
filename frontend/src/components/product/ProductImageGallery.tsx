@@ -1,5 +1,6 @@
 // src/components/product/ProductImageGallery.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 
 interface ProductImageGalleryProps {
   images: string[];
@@ -16,6 +17,13 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [isZooming, setIsZooming] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Agregar estado para controlar el montaje del portal
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // Manejar selección de imagen
   const handleImageSelect = useCallback((index: number) => {
@@ -51,8 +59,8 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
     }
   }, [isLightboxOpen, images.length]);
 
-  // Agregar/remover event listeners
-  React.useEffect(() => {
+  // Agregar/remover event listeners y manejar overflow del body
+  useEffect(() => {
     if (isLightboxOpen) {
       document.addEventListener('keydown', handleKeyPress);
       document.body.style.overflow = 'hidden';
@@ -170,7 +178,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
       </div>
 
       {/* LIGHTBOX MODAL */}
-      {isLightboxOpen && (
+      {isLightboxOpen && isMounted && ReactDOM.createPortal(
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
           
           {/* BOTÓN CERRAR */}
@@ -239,7 +247,8 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
             className="absolute inset-0 -z-10"
             onClick={() => setIsLightboxOpen(false)}
           />
-        </div>
+        </div>,
+        document.getElementById('modal-root')!
       )}
     </>
   );

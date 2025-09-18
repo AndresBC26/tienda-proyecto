@@ -1,8 +1,12 @@
 // src/App.tsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/layout/Layout';
+import ScrollToTop from './components/common/ScrollToTop';
 
 // Páginas de tienda
 import HomePage from './pages/HomePage';
@@ -11,120 +15,114 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import FavoritesPage from './pages/FavoritesPage';
+
+// ===== PÁGINAS DE SOPORTE =====
+import HelpCenterPage from './pages/HelpCenterPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+
+// Páginas de autenticación
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import ProfilePage from './pages/ProfilePage';
+
+// ===== PÁGINAS DE PAGO (NUEVAS) =====
+import CheckoutPage from './pages/CheckoutPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentFailurePage from './pages/PaymentFailurePage';
 
 // Páginas de Admin
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import Products from './pages/admin/Products';
 import Users from './pages/admin/Users';
+import AddProductForm from './pages/admin/AddProductForm';
+import Reviews from './pages/admin/Reviews';
+import Messages from './pages/admin/Messages';
 
+// Componentes para rutas protegidas
+import PrivateRoute from './components/auth/PrivateRoute';
+import UserPrivateRoute from './components/auth/UserPrivateRoute';
 
-// Componente 404
 const NotFoundPage: React.FC = () => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-32 h-32 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-8">
-        <svg className="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-          />
-        </svg>
-      </div>
-      <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-      <h2 className="text-2xl font-semibold text-gray-700 mb-4">Página No Encontrada</h2>
-      <p className="text-gray-600 mb-8 max-w-md mx-auto">
-        Lo sentimos, la página que buscas no existe o ha sido movida a otra ubicación.
-      </p>
-      <div className="space-y-4">
-        <a
-          href="/"
-          className="inline-block bg-[#5FCDD9] hover:bg-[#04BFAD] text-[#172026] font-bold py-3 px-8 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          🏠 Volver al Inicio
-        </a>
-        <div className="block">
-          <a
-            href="/products"
-            className="inline-block bg-white border-2 border-[#5FCDD9] text-[#027373] hover:bg-[#5FCDD9] hover:text-[#172026] font-bold py-3 px-8 rounded-2xl transition-all duration-200"
-          >
-            🛍️ Ver Productos
-          </a>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        {/* Contenido de 404 */}
     </div>
-  </div>
 );
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const navigate = useNavigate();
+
+  const handleAddProductSuccess = () => {
+    navigate('/admin/products');
+  };
+
   return (
-    <CartProvider>
-      <Router>
-        <Routes>
-          {/* Layout de la tienda */}
-          <Route
-            path="/"
-            element={
-              <Layout>
-                <HomePage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <Layout>
-                <ProductsPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/product/:id"
-            element={
-              <Layout>
-                <ProductDetailPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/cart"
-            element={
-              <Layout>
-                <CartPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/about"
-            element={
-              <Layout>
-                <AboutPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/contact"
-            element={
-              <Layout>
-                <ContactPage />
-              </Layout>
-            }
-          />
+    <Routes>
+      {/* Layout de la tienda */}
+      <Route path="/" element={<Layout><HomePage /></Layout>} />
+      <Route path="/products" element={<Layout><ProductsPage /></Layout>} />
+      <Route path="/product/:id" element={<Layout><ProductDetailPage /></Layout>} />
+      <Route path="/cart" element={<Layout><CartPage /></Layout>} />
+      <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+      <Route path="/contact" element={<Layout><ContactPage /></Layout>} />
+      <Route path="/favorites" element={<Layout><FavoritesPage /></Layout>} />
+      
+      {/* Rutas de Soporte */}
+      <Route path="/help-center" element={<Layout><HelpCenterPage /></Layout>} />
+      <Route path="/terms-of-service" element={<Layout><TermsOfServicePage /></Layout>} />
+      <Route path="/privacy-policy" element={<Layout><PrivacyPolicyPage /></Layout>} />
 
-          {/* Sección Admin */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="products" element={<Products />} />
-            <Route path="users" element={<Users />} />
-          </Route>
+      {/* Rutas de Autenticación Públicas */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
-          {/* Página 404 */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Router>
-    </CartProvider>
+      {/* --- RUTA PROTEGIDA PARA USUARIOS LOGUEADOS --- */}
+      <Route element={<UserPrivateRoute />}>
+        <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+        {/* ===== RUTAS DE PAGO AÑADIDAS AQUÍ ===== */}
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
+        <Route path="/payment-failure" element={<PaymentFailurePage />} />
+        {/* ======================================= */}
+      </Route>
+      {/* ----------------------------------------------- */}
+
+      {/* Sección Admin (Protegida por Rol) */}
+      <Route element={<PrivateRoute requiredRole="admin" />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<Products />} />
+          <Route path="users" element={<Users />} />
+          <Route path="reviews" element={<Reviews />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="add-product" element={<AddProductForm onSuccess={handleAddProductSuccess} />} />
+        </Route>
+      </Route>
+
+      {/* Página 404 */}
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+};
+
+const App: React.FC = () => {
+    return (
+    <AuthProvider>
+        <CartProvider>
+            <FavoritesProvider>
+                <NotificationProvider>
+                    <Router>
+                        <ScrollToTop />
+                        <AppContent />
+                    </Router>
+                </NotificationProvider>
+            </FavoritesProvider>
+        </CartProvider>
+    </AuthProvider>
   );
 };
 

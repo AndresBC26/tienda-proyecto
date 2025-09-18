@@ -59,7 +59,7 @@ const connectDB = async () => {
       console.error('   💡 Verifica la configuración de red en MongoDB Atlas');
     }
     
-    console.error('   📝 String esperado: mongodb+srv://user:password@cluster.mx7lpcr.mongodb.net/db');
+    console.error('   📝 String esperado: mongodb+srv://user:password@cluster.mx7lpcr.test.net/db');
     process.exit(1);
   }
 };

@@ -1,203 +1,180 @@
 // src/components/shop/ProductCard.tsx
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Product } from '../../hooks/useProducts';
 import { useCart } from '../../contexts/CartContext';
+import { useFavorites } from '../../contexts/FavoritesContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { dispatch } = useCart();
+  const { state: cartState, dispatch: cartDispatch } = useCart();
+  const { state: favoritesState, dispatch: favoritesDispatch } = useFavorites();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const isFavorite = favoritesState.items.some(item => item._id === product._id);
+  const [pulse, setPulse] = useState(false);
 
-  const handleAddToCart = () => {
-    dispatch({ type: 'ADD_TO_CART', payload: product });
+  // ===== INICIO DE LA LÓGICA CORREGIDA =====
 
-    const button = document.getElementById(`add-btn-${product.id}`);
-    if (button) {
-      button.classList.add('animate-pulse');
-      setTimeout(() => button.classList.remove('animate-pulse'), 600);
+  // 1. Calcula el STOCK TOTAL del producto sumando todas sus tallas.
+  const totalStock = product.sizes?.reduce((sum, size) => sum + size.stock, 0) || 0;
+  const isOutOfStock = totalStock === 0;
+
+  // 2. Calcula la CANTIDAD TOTAL de este producto que ya está en el carrito (sumando todas sus tallas).
+  const totalQuantityInCart = cartState.items
+    .filter(item => item._id === product._id)
+    .reduce((sum, item) => sum + item.quantity, 0);
+
+  // 3. El límite se alcanza si la cantidad en el carrito es igual o mayor al stock total.
+  const isLimitReached = totalQuantityInCart >= totalStock;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Si ya se alcanzó el límite total, no hacer nada.
+    if (isLimitReached || isOutOfStock) {
+      return;
+    }
+
+    // 4. Lógica para agregar UNA unidad de la talla más apropiada.
+    // Busca la primera talla que aún tenga stock y que no haya alcanzado su límite en el carrito.
+    const sizeToAdd = product.sizes.find(size => {
+      const itemInCart = cartState.items.find(
+        cartItem => cartItem.cartItemId === `${product._id}-${size.size}`
+      );
+      const quantityInCartForSize = itemInCart ? itemInCart.quantity : 0;
+      return quantityInCartForSize < size.stock;
+    });
+
+    // Si se encuentra una talla disponible para agregar, se despacha la acción.
+    if (sizeToAdd) {
+      cartDispatch({
+        type: 'ADD_PRODUCTS_TO_CART',
+        payload: { product, quantity: 1, size: sizeToAdd.size },
+      });
+
+      setPulse(true);
+      setTimeout(() => setPulse(false), 600);
+    } else {
+      // Esto puede pasar si el carrito y el stock total no están sincronizados, es una seguridad extra.
+      console.warn("No se encontró una talla disponible para agregar, aunque el límite total no se ha alcanzado.");
+    }
+  };
+
+  // ===== FIN DE LA LÓGICA CORREGIDA =====
+
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (isFavorite) {
+      favoritesDispatch({ type: 'REMOVE_FROM_FAVORITES', payload: product._id });
+    } else {
+      favoritesDispatch({ type: 'ADD_TO_FAVORITES', payload: product });
     }
   };
 
   const renderStars = (rating: number) => {
-    return [...Array(5)].map((_, i) => (
-      <svg
-        key={i}
-        className={`w-4 h-4 ${
-          i < Math.floor(rating) ? 'text-[#5FCDD9] fill-current' : 'text-gray-300 fill-current'
-        }`}
-        viewBox="0 0 20 20"
-      >
-        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-      </svg>
-    ));
+    if (isNaN(rating) || rating < 0) rating = 0;
+    const filledStars = Math.floor(rating);
+    return (
+        <div className="flex items-center">
+            {[...Array(filledStars)].map((_, i) => <svg key={`filled-${i}`} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
+            {[...Array(5 - filledStars)].map((_, i) => <svg key={`empty-${i}`} className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>)}
+        </div>
+    );
   };
 
   return (
-    <div className="group bg-gradient-to-br from-[#ffffff] via-[#E6FBF9] to-[#D9F7F5] rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:-translate-y-2 border border-[#5FCDD9]/30">
-      
-      {/* IMAGEN DEL PRODUCTO - AHORA CLICKEABLE */}
-      <Link 
-        to={`/product/${product.id}`}
-        className="relative overflow-hidden bg-gradient-to-br from-[#5FCDD9]/10 to-[#04BFAD]/10 block"
-      >
+    <Link 
+      to={`/product/${product._id}`} 
+      className="group block bg-[#151515]/80 backdrop-blur-sm border border-white/10 rounded-3xl shadow-2xl shadow-black/30 hover:shadow-black/40 transition-all duration-300 overflow-hidden transform hover:-translate-y-1.5 flex flex-col min-h-[380px] max-w-sm mx-auto"
+    >
+      <div className="relative overflow-hidden">
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-56 object-cover transition-transform duration-700 group-hover:scale-110 cursor-pointer"
-          onError={(e) => {
-            e.currentTarget.src = 'https://via.placeholder.com/400?text=Producto';
-          }}
+          className="w-full aspect-[4/3] object-cover transition-transform duration-500 group-hover:scale-110"
         />
-
-        {/* OVERLAY */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#172026]/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-        {/* BADGE DE CATEGORÍA */}
-        <div className="absolute top-4 left-4">
-          <span className="bg-white/90 backdrop-blur-sm text-[#027373] px-3 py-1 rounded-full text-sm font-medium shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        
+        <div className="absolute top-3 left-3">
+          <span className="bg-black/50 backdrop-blur-sm text-[#60caba] px-2 py-1 rounded-full text-xs font-bold shadow-lg">
             {product.category}
           </span>
         </div>
 
-        {/* BADGE DE STOCK */}
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-3 right-3">
           <span
-            className={`px-3 py-1 rounded-full text-sm font-medium shadow-lg ${
-              product.stock > 10
-                ? 'bg-[#04BF9D] text-white'
-                : product.stock > 0
-                ? 'bg-[#5FCDD9] text-[#172026]'
-                : 'bg-red-500 text-white'
+            className={`bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-bold shadow-lg ${
+              isOutOfStock
+                ? 'text-red-400'
+                : totalStock <= 10
+                ? 'text-yellow-400'
+                : 'text-green-400'
             }`}
           >
-            {product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}
+            {isOutOfStock
+              ? 'Agotado'
+              : `${totalStock} ${totalStock === 1 ? 'Disp.' : 'Disps.'}`
+            }
           </span>
         </div>
 
-        {/* BOTÓN DE FAVORITO */}
-        <button 
-          className="absolute bottom-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:scale-110"
-          onClick={(e) => {
-            e.preventDefault(); // Evitar navegación cuando se hace click en favorito
-            e.stopPropagation();
-            // Aquí puedes agregar lógica de favoritos
-          }}
+        <button
+          onClick={handleToggleFavorite}
+          className={`absolute bottom-3 right-3 w-8 h-8 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 z-10 ${
+            isFavorite ? 'bg-red-500/80 text-white' : 'bg-black/50 text-white hover:text-red-400'
+          }`}
         >
-          <svg
-            className="w-5 h-5 text-[#027373] hover:text-[#04BF9D] transition-colors"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            />
-          </svg>
+          <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
         </button>
+      </div>
 
-        {/* INDICADOR DE VER DETALLES */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <div className="bg-white/90 backdrop-blur-sm text-[#027373] px-4 py-2 rounded-full font-medium shadow-lg transform scale-95 group-hover:scale-100 transition-transform duration-300 flex items-center space-x-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span>Ver Detalles</span>
-          </div>
-        </div>
-      </Link>
-
-      {/* INFO DEL PRODUCTO */}
-      <div className="p-6">
-        <Link 
-          to={`/product/${product.id}`}
-          className="block group-hover:text-[#027373] transition-colors"
-        >
-          <h3 className="text-xl font-bold text-[#172026] mb-2 line-clamp-2">
+      <div className="p-4 flex flex-col justify-between flex-1">
+        <div>
+          <h3 className="text-lg font-bold text-gray-100 mb-1 line-clamp-2 group-hover:text-[#FFD700] transition-colors">
             {product.name}
           </h3>
-        </Link>
-
-        <p className="text-[#027373] text-sm mb-3 line-clamp-2 leading-relaxed">
-          {product.description}
-        </p>
-
-        {/* RATING */}
-        <div className="flex items-center space-x-2 mb-3">
-          <div className="flex space-x-1">{renderStars(product.rating)}</div>
-          <span className="text-sm text-[#04BFAD]">
-            ({product.rating}) • {product.reviewCount} reseñas
-          </span>
-        </div>
-
-        {/* PRECIO */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <span className="text-2xl font-bold text-[#172026]">
-              ${product.price.toLocaleString()}
-            </span>
-            <span className="text-sm text-[#027373]/70 line-through ml-2">
-              ${(product.price * 1.2).toLocaleString()}
-            </span>
+          
+          <div className="flex items-center space-x-2 mb-2">
+            {renderStars(product.rating)}
+            <span className="text-xs text-gray-400">({product.reviewCount} reseñas)</span>
           </div>
 
-          <div className="bg-[#04BF9D] text-white px-2 py-1 rounded-lg text-xs font-bold">-20%</div>
+          <div className="flex items-baseline space-x-2 mb-4">
+            <span className="text-xl font-bold text-white">${product.price.toLocaleString()}</span>
+            <span className="text-sm text-gray-500 line-through">${(product.price * 1.2).toLocaleString()}</span>
+            <span className="bg-red-500/20 text-red-300 px-2 py-0.5 rounded text-xs font-bold">-20%</span>
+          </div>
         </div>
 
-        {/* CARACTERÍSTICAS */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {['Garantía 1 año', 'Envío gratis'].map((feature) => (
-            <span
-              key={feature}
-              className="bg-[#5FCDD9]/20 text-[#027373] px-2 py-1 rounded-lg text-xs font-medium"
-            >
-              {feature}
-            </span>
-          ))}
-        </div>
-
-        {/* BOTONES */}
-        <div className="space-y-3">
-          <Link
-            to={`/product/${product.id}`}
-            className="w-full bg-[#027373] hover:bg-[#04BFAD] text-white font-bold py-3 px-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center space-x-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span>Ver Detalles</span>
-          </Link>
-
+        <div className="mt-auto pt-2">
           <button
-            id={`add-btn-${product.id}`}
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`w-full font-bold py-3 px-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center space-x-2 ${
-              product.stock === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-[#5FCDD9] hover:bg-[#04BFAD] text-[#172026]'
+            disabled={isOutOfStock || isLimitReached}
+            className={`w-full font-bold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 text-sm ${
+              isOutOfStock || isLimitReached
+                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                : `bg-gradient-to-r from-[#60caba] to-[#FFD700] text-black shadow-lg shadow-[#60caba44] hover:from-[#58b7a9] hover:to-[#E6C600] transform hover:scale-105 ${pulse ? 'animate-pulse' : ''}`
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 4H19m-10-4v6a2 2 0 104 0v-6m-4 0h4" />
-            </svg>
-            <span>{product.stock === 0 ? 'Agotado' : 'Agregar al Carrito'}</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5.4M7 13l-1.5 4H19m-10-4v6a2 2 0 104 0v-6m-4 0h4" /></svg>
+            <span>
+              {isOutOfStock ? 'Agotado' : isLimitReached ? 'Límite en Carrito' : 'Agregar al Carrito'}
+            </span>
           </button>
         </div>
       </div>
-
-      {/* EFECTO BRILLO */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-      </div>
-    </div>
+    </Link>
   );
 };
 

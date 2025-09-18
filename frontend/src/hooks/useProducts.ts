@@ -1,51 +1,35 @@
+// src/hooks/useProducts.ts
 import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import axios from 'axios';
 
-// Definimos la estructura de un producto
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-  category: string;
-  description: string;
-  stock: number;
-  rating: number;
-  reviewCount: number;
-}
+export interface Size { _id?: string; size: string; stock: number; }
+export interface Product { _id: string; name: string; description: string; price: number; category: string; image: string; stock?: number; rating: number; reviewCount: number; sizes: Size[]; }
 
-// Custom hook para manejar productos
 export const useProducts = () => {
-  // Estados para productos, carga y errores
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para obtener productos del backend
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/products');
-      setProducts(response.data);
-      setError(null); // Limpiar errores previos
-    } catch (err: any) {
-      setError(err.message);
-      console.error('❌ Error obteniendo productos:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Ejecutar al cargar el hook
   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        // ✅ SOLUCIÓN: Se añade una URL de respaldo para el entorno de desarrollo.
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        
+        const response = await axios.get(`${apiUrl}/api/products`);
+        setProducts(response.data);
+        setError(null);
+      } catch (err: any) {
+        setError("No se pudieron cargar los productos. Asegúrate de que el backend está corriendo.");
+        console.error("Error fetching products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchProducts();
   }, []);
 
-  // Retornar estados y funciones
-  return {
-    products, // Lista de productos
-    loading, // Si está cargando
-    error, // Si hay error
-    refetch: fetchProducts, // Función para recargar
-  };
+  return { products, loading, error };
 };
