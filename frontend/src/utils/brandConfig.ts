@@ -49,9 +49,13 @@ export const brandConfig = {
   // CONFIGURACIÓN DE NEGOCIO
   business: {
     currency: 'COP',
-    freeShippingThreshold: 150000, // Envío gratis desde $150.000 COP
-    returnDays: 30, // Días para devoluciones
-    warrantyYears: 1, // Año de garantía
+    freeShippingThreshold: 100000,
+    shippingCost: 12000,
+    // ===== AÑADIMOS EL DESCUENTO AQUÍ =====
+    discountPercentage: 0.10, // 10% de descuento general
+    // =====================================
+    returnDays: 30,
+    warrantyYears: 1,
     supportHours: 'Lun - Sab: 9AM - 7PM',
   },
 };

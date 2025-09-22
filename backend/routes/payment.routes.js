@@ -1,4 +1,4 @@
-// routes/payment.routes.js - Versión corregida y completa con descuento
+// routes/payment.routes.js
 const express = require('express');
 const router = express.Router();
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
@@ -7,6 +7,11 @@ const Order = require('../models/Order');
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
+
+// ===== CONSTANTES DE NEGOCIO (PARA COHERENCIA) =====
+const FREE_SHIPPING_THRESHOLD = 100000;
+const SHIPPING_COST = 12000;
+// =================================================
 
 router.post('/create-preference', async (req, res) => {
   console.log('🔥 === INICIO CREATE-PREFERENCE ===');
@@ -19,15 +24,18 @@ router.post('/create-preference', async (req, res) => {
       return res.status(400).json({ message: 'El carrito de compras no puede estar vacío.' });
     }
     
-    // --- LÓGICA DE DESCUENTO ---
     const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const discountPercentage = 0.10; // 10% de descuento
-    const discountAmount = subtotal * discountPercentage;
-    const finalTotal = subtotal - discountAmount;
-
-    console.log(`💰 Subtotal: ${subtotal}, Descuento: ${discountAmount}, Total Final: ${finalTotal}`);
     
-    // Crear la orden en la base de datos con el total final que incluye el descuento
+    // ===== PORCENTAJE DE DESCUENTO CORREGIDO AL 10% =====
+    const discountPercentage = 0.10; 
+    const discountAmount = subtotal * discountPercentage;
+
+    // LÓGICA DE ENVÍO EN EL BACKEND
+    const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+    const finalTotal = subtotal - discountAmount + shippingCost;
+
+    console.log(`💰 Subtotal: ${subtotal}, Descuento: ${discountAmount}, Envío: ${shippingCost}, Total Final: ${finalTotal}`);
+    
     const newOrder = new Order({
       user: userId,
       products: cartItems.map(item => ({
@@ -35,14 +43,13 @@ router.post('/create-preference', async (req, res) => {
         quantity: item.quantity,
         selectedSize: item.selectedSize,
       })),
-      total: finalTotal, // Usamos el total con descuento
+      total: finalTotal, // Usamos el total final que incluye el envío
       shippingAddress,
       status: 'pending',
     });
     const savedOrder = await newOrder.save();
-    console.log('💾 Orden guardada con ID:', savedOrder._id);
+    console.log('💾 Orden guardada con ID:', savedOrder._id, 'y Total:', finalTotal);
 
-    // Preparar los ítems para Mercado Pago
     const items = cartItems.map(item => ({
       id: item._id || item.id,
       title: item.name,
@@ -53,25 +60,36 @@ router.post('/create-preference', async (req, res) => {
       description: `Talla: ${item.selectedSize}`,
     }));
 
-    // AÑADIR EL DESCUENTO COMO UN ÍTEM CON PRECIO NEGATIVO
     if (discountAmount > 0) {
       items.push({
         id: 'descuento-general',
         title: 'Descuento Especial',
-        description: 'Descuento del 10% aplicado en tu compra',
-        unit_price: -discountAmount, // ¡La clave! El valor es negativo
+        description: 'Descuento del 10% aplicado en tu compra', // Descripción corregida
+        unit_price: -discountAmount,
         quantity: 1,
         currency_id: 'COP',
       });
     }
 
-    console.log('🛒 Items preparados para MP (con descuento):', JSON.stringify(items, null, 2));
+    // AÑADIR EL ENVÍO COMO UN ÍTEM PARA MERCADO PAGO
+    if (shippingCost > 0) {
+        items.push({
+            id: 'costo-envio',
+            title: 'Costo de Envío',
+            description: 'Tarifa de envío estándar para compras menores a $100.000',
+            unit_price: shippingCost,
+            quantity: 1,
+            currency_id: 'COP',
+        });
+    }
+
+    console.log('🛒 Items preparados para MP:', JSON.stringify(items, null, 2));
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
 
     const preferenceData = {
-      items: items, // Enviamos los productos y el descuento
+      items: items,
       external_reference: savedOrder._id.toString(),
       back_urls: {
         success: `${frontendUrl}/payment-success?order_id=${savedOrder._id}`,
@@ -84,8 +102,6 @@ router.post('/create-preference', async (req, res) => {
     console.log('⚙️ Preference data completa:', JSON.stringify(preferenceData, null, 2));
 
     const preference = new Preference(client);
-    console.log('🚀 Creando preferencia...');
-    
     const result = await preference.create({ body: preferenceData });
 
     console.log('✅ Preferencia creada exitosamente:', result.id);
@@ -127,7 +143,7 @@ router.get('/order-status/:orderId', async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 });
-
+  
 // Endpoint para Webhook de Mercado Pago
 router.post('/webhook', async (req, res) => {
   console.log('🔔 Webhook recibido');

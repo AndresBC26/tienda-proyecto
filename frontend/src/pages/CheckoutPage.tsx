@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import Layout from '../components/layout/Layout';
+import { brandConfig } from '../utils/brandConfig';
 
 interface ShippingAddress {
   fullName: string;
@@ -20,7 +21,7 @@ const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
-
+  
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
     fullName: '',
     email: '',
@@ -32,7 +33,6 @@ const CheckoutPage: React.FC = () => {
     country: 'Colombia'
   });
 
-  // Redirigir si el carrito está vacío
   useEffect(() => {
     if (cartState.items.length === 0) {
       navigate('/cart');
@@ -57,14 +57,12 @@ const CheckoutPage: React.FC = () => {
       }
     }
 
-    // Validar email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(shippingAddress.email)) {
       setError('Por favor, ingresa un email válido');
       return false;
     }
 
-    // Validar teléfono (básico)
     if (shippingAddress.phone.length < 10) {
       setError('Por favor, ingresa un número de teléfono válido');
       return false;
@@ -95,25 +93,17 @@ const CheckoutPage: React.FC = () => {
   setIsLoading(true);
 
   try {
-    // Preparar los datos para el backend
     const paymentData = {
       cartItems: cartState.items,
       userId: localStorage.getItem('userId') || 'guest',
       shippingAddress: shippingAddress,
     };
-
-    console.log('Enviando datos al backend:', paymentData);
     
-    // ✅ SOLUCIÓN: Se unifica la variable a REACT_APP_API_URL para consistencia.
     const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     const fullUrl = `${backendUrl}/api/payment/create-preference`;
 
-    console.log('URL completa:', fullUrl);
-    console.log('Iniciando fetch...');
-
-    // Fetch con timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); 
 
     const response = await fetch(fullUrl, {
       method: 'POST',
@@ -126,42 +116,24 @@ const CheckoutPage: React.FC = () => {
 
     clearTimeout(timeoutId);
 
-    console.log('Respuesta recibida:', {
-      status: response.status,
-      ok: response.ok,
-      headers: Object.fromEntries(response.headers.entries()),
-    });
-
     let data;
     try {
       data = await response.json();
     } catch (jsonError) {
-      console.error('Error parsing JSON:', jsonError);
       const textResponse = await response.text();
-      console.error('Respuesta como texto:', textResponse);
       throw new Error('Respuesta del servidor no es JSON válido');
     }
-
-    console.log('Datos parseados:', data);
 
     if (!response.ok) {
       throw new Error(data.message || `Error HTTP ${response.status}: ${data.details || 'Error al procesar el pago'}`);
     }
 
-    // Redirigir a Mercado Pago
     if (data.id) {
-      console.log('Redirigiendo a Mercado Pago con ID:', data.id);
-      // En modo sandbox (prueba)
       window.location.href = `https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=${data.id}`;
-
-      // Para producción, cambiar a:
-      // window.location.href = `https://www.mercadopago.com/checkout/v1/redirect?pref_id=${data.id}`;
     } else {
       throw new Error('No se recibió el ID de la preferencia en la respuesta');
     }
   } catch (error) {
-    console.error('Error detallado al procesar el pago:', error);
-
     if (error instanceof Error && error.name === 'AbortError') {
       setError('La petición tardó demasiado. Verifica tu conexión e intenta nuevamente.');
     } else if (error instanceof Error && error.message.includes('fetch')) {
@@ -175,19 +147,24 @@ const CheckoutPage: React.FC = () => {
 };
 
   if (cartState.items.length === 0) {
-    return null; // El useEffect ya redirigirá
+    return null; 
   }
 
+  // ===== INICIO DE LA LÓGICA DE ENVÍO Y DESCUENTO =====
   const subtotal = cartState.total;
-  const discount = subtotal * 0.1; // 10% de descuento
-  const shipping = 0; // Envío gratis
-  const total = subtotal - discount + shipping;
+  const discount = subtotal * (brandConfig.business.discountPercentage || 0.10);
+  
+  const shippingCost = subtotal >= brandConfig.business.freeShippingThreshold
+    ? 0
+    : brandConfig.business.shippingCost;
+
+  const total = subtotal - discount + shippingCost;
+  // ===== FIN DE LA LÓGICA =====
 
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12">
         <div className="container mx-auto px-6 max-w-7xl">
-          {/* Breadcrumb */}
           <nav className="mb-8">
             <div className="flex items-center space-x-2 text-sm text-gray-400">
               <Link to="/" className="hover:text-[#FFD700] transition-colors">Inicio</Link>
@@ -198,7 +175,6 @@ const CheckoutPage: React.FC = () => {
             </div>
           </nav>
 
-          {/* Header */}
           <div className="mb-12 text-center">
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
               💳 Finalizar Compra
@@ -208,7 +184,6 @@ const CheckoutPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-center">
               {error}
@@ -216,16 +191,13 @@ const CheckoutPage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Formulario de Datos de Envío */}
             <div className="lg:col-span-2">
               <div className="bg-[#151515]/80 backdrop-blur-sm border border-white/10 rounded-3xl shadow-2xl shadow-black/30 p-8">
                 <h2 className="text-2xl font-bold text-gray-100 mb-6 flex items-center space-x-2">
                   <span>📦</span>
                   <span>Datos de Envío</span>
                 </h2>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Nombre Completo */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Nombre Completo *
@@ -240,8 +212,6 @@ const CheckoutPage: React.FC = () => {
                       required
                     />
                   </div>
-
-                  {/* Email */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Correo Electrónico *
@@ -256,8 +226,6 @@ const CheckoutPage: React.FC = () => {
                       required
                     />
                   </div>
-
-                  {/* Teléfono */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Teléfono *
@@ -273,7 +241,6 @@ const CheckoutPage: React.FC = () => {
                     />
                   </div>
 
-                  {/* Dirección */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Dirección Completa *
@@ -288,8 +255,6 @@ const CheckoutPage: React.FC = () => {
                       required
                     />
                   </div>
-
-                  {/* Ciudad */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Ciudad *
@@ -304,8 +269,6 @@ const CheckoutPage: React.FC = () => {
                       required
                     />
                   </div>
-
-                  {/* Departamento */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Departamento *
@@ -324,11 +287,8 @@ const CheckoutPage: React.FC = () => {
                       <option value="Atlántico">Atlántico</option>
                       <option value="Santander">Santander</option>
                       <option value="Bolívar">Bolívar</option>
-                      {/* Agregar más departamentos según necesites */}
                     </select>
                   </div>
-
-                  {/* Código Postal */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Código Postal
@@ -342,8 +302,6 @@ const CheckoutPage: React.FC = () => {
                       placeholder="Ej: 110111"
                     />
                   </div>
-
-                  {/* País */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       País
@@ -361,7 +319,6 @@ const CheckoutPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Resumen del Pedido */}
             <div className="lg:col-span-1">
               <div className="bg-[#151515]/80 backdrop-blur-sm border border-white/10 rounded-3xl shadow-2xl shadow-black/30 p-8 sticky top-24">
                 <h2 className="text-2xl font-bold text-gray-100 mb-6 flex items-center space-x-2">
@@ -369,7 +326,6 @@ const CheckoutPage: React.FC = () => {
                   <span>Resumen del Pedido</span>
                 </h2>
 
-                {/* Productos */}
                 <div className="space-y-4 mb-6 max-h-60 overflow-y-auto">
                   {cartState.items.map(item => (
                     <div key={item.cartItemId} className="flex items-center space-x-3 bg-white/5 rounded-xl p-3">
@@ -389,7 +345,6 @@ const CheckoutPage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Totales */}
                 <div className="space-y-3 mb-8 pt-6 border-t border-white/10">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Subtotal ({cartState.itemCount} productos)</span>
@@ -397,7 +352,11 @@ const CheckoutPage: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Envío</span>
-                    <span className="font-semibold text-[#60caba]">GRATIS</span>
+                    {shippingCost === 0 ? (
+                      <span className="font-semibold text-[#60caba]">GRATIS</span>
+                    ) : (
+                      <span className="font-semibold text-gray-100">${shippingCost.toLocaleString()}</span>
+                    )}
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Descuento (10%)</span>
@@ -410,7 +369,6 @@ const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Botones de Acción */}
                 <div className="space-y-4">
                   <button
                     onClick={handleProcessPayment}
@@ -437,8 +395,7 @@ const CheckoutPage: React.FC = () => {
                     ← Volver al Carrito
                   </Link>
                 </div>
-
-                {/* Información de Seguridad */}
+                
                 <div className="mt-8 pt-6 border-t border-white/10">
                   <div className="space-y-3">
                     {[

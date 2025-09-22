@@ -5,6 +5,7 @@ import { Product } from '../../hooks/useProducts';
 import { useCart } from '../../contexts/CartContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { brandConfig } from '../../utils/brandConfig';
 
 interface ProductCardProps {
   product: Product;
@@ -18,31 +19,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isFavorite = favoritesState.items.some(item => item._id === product._id);
   const [pulse, setPulse] = useState(false);
 
-  // ===== INICIO DE LA LÓGICA CORREGIDA =====
-
-  // 1. Calcula el STOCK TOTAL del producto sumando todas sus tallas.
+  // Lógica para stock y carrito (sin cambios)
   const totalStock = product.sizes?.reduce((sum, size) => sum + size.stock, 0) || 0;
   const isOutOfStock = totalStock === 0;
-
-  // 2. Calcula la CANTIDAD TOTAL de este producto que ya está en el carrito (sumando todas sus tallas).
   const totalQuantityInCart = cartState.items
     .filter(item => item._id === product._id)
     .reduce((sum, item) => sum + item.quantity, 0);
-
-  // 3. El límite se alcanza si la cantidad en el carrito es igual o mayor al stock total.
   const isLimitReached = totalQuantityInCart >= totalStock;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    // Si ya se alcanzó el límite total, no hacer nada.
-    if (isLimitReached || isOutOfStock) {
-      return;
-    }
-
-    // 4. Lógica para agregar UNA unidad de la talla más apropiada.
-    // Busca la primera talla que aún tenga stock y que no haya alcanzado su límite en el carrito.
+    if (isLimitReached || isOutOfStock) return;
     const sizeToAdd = product.sizes.find(size => {
       const itemInCart = cartState.items.find(
         cartItem => cartItem.cartItemId === `${product._id}-${size.size}`
@@ -50,23 +38,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       const quantityInCartForSize = itemInCart ? itemInCart.quantity : 0;
       return quantityInCartForSize < size.stock;
     });
-
-    // Si se encuentra una talla disponible para agregar, se despacha la acción.
     if (sizeToAdd) {
       cartDispatch({
         type: 'ADD_PRODUCTS_TO_CART',
         payload: { product, quantity: 1, size: sizeToAdd.size },
       });
-
       setPulse(true);
       setTimeout(() => setPulse(false), 600);
-    } else {
-      // Esto puede pasar si el carrito y el stock total no están sincronizados, es una seguridad extra.
-      console.warn("No se encontró una talla disponible para agregar, aunque el límite total no se ha alcanzado.");
     }
   };
-
-  // ===== FIN DE LA LÓGICA CORREGIDA =====
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -92,6 +72,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
     );
   };
+  
+  const discountPercentage = (brandConfig.business.discountPercentage || 0.10) * 100;
+  const originalPrice = product.price / (1 - (brandConfig.business.discountPercentage || 0.10));
 
   return (
     <Link 
@@ -150,11 +133,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span className="text-xs text-gray-400">({product.reviewCount} reseñas)</span>
           </div>
 
+          {/* ===== INICIO DEL CAMBIO IMPORTANTE ===== */}
           <div className="flex items-baseline space-x-2 mb-4">
             <span className="text-xl font-bold text-white">${product.price.toLocaleString()}</span>
-            <span className="text-sm text-gray-500 line-through">${(product.price * 1.2).toLocaleString()}</span>
-            <span className="bg-red-500/20 text-red-300 px-2 py-0.5 rounded text-xs font-bold">-20%</span>
+            <span className="text-sm text-gray-500 line-through">${originalPrice.toLocaleString('es-CO', {maximumFractionDigits: 0})}</span>
+            <span className="bg-red-500/20 text-red-300 px-2 py-0.5 rounded text-xs font-bold">-{discountPercentage}%</span>
           </div>
+          {/* ===== FIN DEL CAMBIO IMPORTANTE ===== */}
         </div>
 
         <div className="mt-auto pt-2">
