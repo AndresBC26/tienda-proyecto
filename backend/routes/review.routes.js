@@ -75,14 +75,41 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 🔹 NUEVO: Endpoint para ELIMINAR una reseña (DELETE /api/reviews/:id)
+// 🔹 CORRECCIÓN APLICADA AQUÍ 🔹
+// Endpoint para ELIMINAR una reseña (DELETE /api/reviews/:id)
 router.delete('/:id', async (req, res) => {
   try {
-    const deletedReview = await Review.findByIdAndDelete(req.params.id);
-    if (!deletedReview) {
+    // 1. Primero, encuentra la reseña para saber a qué producto pertenece
+    const reviewToDelete = await Review.findById(req.params.id);
+    if (!reviewToDelete) {
       return res.status(404).json({ message: 'Reseña no encontrada' });
     }
-    res.json({ message: 'Reseña eliminada correctamente' });
+    const productId = reviewToDelete.product;
+
+    // 2. Ahora sí, elimina la reseña
+    await Review.findByIdAndDelete(req.params.id);
+
+    // 3. Busca el producto afectado para actualizarlo
+    const product = await Product.findById(productId);
+    if (product) {
+      // 4. Recalcula el rating y el conteo
+      const reviews = await Review.find({ product: productId });
+      
+      if (reviews.length > 0) {
+        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        product.rating = totalRating / reviews.length;
+        product.reviewCount = reviews.length;
+      } else {
+        // Si no quedan reseñas, resetea los valores
+        product.rating = 0;
+        product.reviewCount = 0;
+      }
+      
+      // 5. Guarda el producto con los datos actualizados
+      await product.save();
+    }
+
+    res.json({ message: 'Reseña eliminada y producto actualizado correctamente' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

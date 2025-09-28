@@ -12,17 +12,10 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   wantsEmails: { type: Boolean, default: true },
-
-  // ===== CORRECCIÓN APLICADA AQUÍ =====
-  // Se simplifica la validación para hacerla más robusta.
-  // Ahora solo requiere que el campo exista y sea booleano.
-  // Tu frontend ya se encarga de que el valor sea 'true'.
   acceptedTerms: {
     type: Boolean,
     required: [true, 'Debes aceptar los términos y condiciones para registrarte.'],
   },
-  // ===== FIN DE LA CORRECCIÓN =====
-
   role: { type: String, default: 'user' },
   favorites: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -31,6 +24,11 @@ const userSchema = new mongoose.Schema({
   cart: [cartItemSchema],
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
+
+  // ===== CAMPOS AÑADIDOS PARA RESETEO DE CONTRASEÑA =====
+  resetPasswordToken: { type: String },
+  resetPasswordExpire: { type: Date },
+  // =======================================================
 });
 
 module.exports = mongoose.model('User', userSchema);

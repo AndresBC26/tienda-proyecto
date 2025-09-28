@@ -35,7 +35,7 @@ const FavoritesPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-[calc(100vh-500px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12 text-white">
+        <div className="min-h-[calc(100vh-500px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 text-white">
             <div className="container mx-auto px-6">
                 <div className="mb-12 text-center">
                     <h1 className="text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">

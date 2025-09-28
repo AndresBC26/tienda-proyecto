@@ -1,5 +1,5 @@
 // src/pages/ProductsPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProducts } from '../hooks/useProducts';
 import ProductCard from '../components/shop/ProductCard';
 import Loading from '../components/common/Loading';
@@ -9,22 +9,39 @@ const ProductsPage: React.FC = () => {
   const { products, loading, error } = useProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchTerm = searchParams.get('search') || '';
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
-  // Función para manejar el cambio en el input de búsqueda
+  useEffect(() => {
+    setSelectedCategory(searchParams.get('category') || 'all');
+  }, [searchParams]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    const newSearchParams = new URLSearchParams(searchParams);
     if (value) {
-      setSearchParams({ search: value });
+      newSearchParams.set('search', value);
     } else {
-      searchParams.delete('search');
-      setSearchParams(searchParams);
+      newSearchParams.delete('search');
     }
+    setSearchParams(newSearchParams);
+  };
+  
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setSelectedCategory(value);
+    
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (value === 'all') {
+      newSearchParams.delete('category');
+    } else {
+      newSearchParams.set('category', value);
+    }
+    setSearchParams(newSearchParams);
   };
 
-  // Filtrar y ordenar productos
   const filteredProducts = products
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -44,10 +61,6 @@ const ProductsPage: React.FC = () => {
       }
     });
 
-  // Obtener categorías únicas
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
-
-  // ESTADO DE CARGA
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20">
@@ -127,14 +140,13 @@ const ProductsPage: React.FC = () => {
               <div className="lg:w-48">
                 <select
                   value={selectedCategory}
-                  onChange={e => setSelectedCategory(e.target.value)}
+                  onChange={handleCategoryChange}
                   className="w-full py-4 px-4 bg-black/40 border border-white/10 rounded-2xl focus:bg-black/60 focus:ring-2 focus:ring-[#60caba] focus:outline-none transition-all duration-200 text-white font-medium"
                 >
                   <option value="all">Todas las categorías</option>
-                  <option value="Camisetas Overzide">Camisetas Overzide</option>
+                  <option value="Camisetas Oversize">Camisetas Oversize</option>
                   <option value="Camisetas Basicas">Camisetas Basicas</option>
                   <option value="Camisetas Estampadas">Camisetas Estampadas</option>
-                  {/* Se eliminó la categoría "Camisetas" para evitar duplicados */}
                 </select>
               </div>
 

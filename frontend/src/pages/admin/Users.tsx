@@ -1,33 +1,30 @@
 // src/pages/admin/Users.tsx
 import React, { useEffect, useState } from "react";
 import Modal from "../../components/common/Modal";
+import { useNotification } from "../../contexts/NotificationContext"; // Importa el hook de notificación
+import toast, { Toast } from 'react-hot-toast'; // Importa toast y el TIPO Toast
 
 interface User {
   _id: string;
   name: string;
   email: string;
   role: string;
-  // CAMBIO: Se eliminaron las propiedades opcionales no utilizadas como 'phone'
   gender?: string;
   documentType?: string;
   documentNumber?: string;
   birthDate?: string;
 }
 
-// ✅ SOLUCIÓN CORRECTA PARA CREATE REACT APP
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const UsersAdmin: React.FC = () => {
+  const { notify } = useNotification(); // Inicializa el hook
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
-
-  // Modal
   const [isOpen, setIsOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-
-  // Form
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -42,8 +39,16 @@ const UsersAdmin: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/users`);
-      if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Error ${res.status}`);
+      }
       const data = await res.json();
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -69,36 +74,93 @@ const UsersAdmin: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
       const method = editingUser ? 'PUT' : 'POST';
-      const url = editingUser ? `${API_URL}/api/users/${editingUser._id}` : `${API_URL}/api/users`;
+      const url = editingUser ? `${API_URL}/api/users/${editingUser._id}` : `${API_URL}/api/users/register`;
       
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Error ${res.status}`);
+      }
       
+      notify(editingUser ? 'Usuario actualizado exitosamente' : 'Usuario agregado exitosamente', 'success');
       fetchUsers();
       setIsOpen(false);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      alert(`Error al guardar usuario: ${errorMessage}`);
+      notify(`Error al guardar usuario: ${errorMessage}`, 'error');
     }
   };
 
-  const deleteUser = async (id: string) => {
-    if (window.confirm("¿Seguro que quieres eliminar este usuario?")) {
-      try {
-        const res = await fetch(`${API_URL}/api/users/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-        setUsers(users.filter((u) => u._id !== id));
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-        alert(`Error al eliminar usuario: ${errorMessage}`);
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        notify('No se encontró tu sesión. Por favor, inicia sesión de nuevo.', 'error');
+        return;
       }
+
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || `Error ${res.status}: ${res.statusText}`);
+      }
+
+      setUsers(users.filter((u) => u._id !== id));
+      notify('Usuario eliminado exitosamente.', 'success');
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      notify(`Error al eliminar usuario: ${errorMessage}`, 'error');
     }
+  };
+
+  const deleteUser = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Evita que se abra el modal de edición
+    notify(
+      (t: Toast) => (
+        <div className="text-white p-2">
+          <p className="font-bold mb-2">¿Confirmas la eliminación?</p>
+          <p className="text-sm text-gray-400 mb-4">Esta acción no se puede deshacer.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                handleConfirmDelete(id);
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-all"
+            >
+              Eliminar
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ),
+      'info',
+      {
+        duration: 6000,
+      }
+    );
   };
   
   const getGenderIcon = (gender?: string) => gender?.toLowerCase().startsWith('m') ? '👨' : gender?.toLowerCase().startsWith('f') ? '👩' : '👤';
@@ -145,11 +207,29 @@ const UsersAdmin: React.FC = () => {
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {users.map((user) => (
-            <div key={user._id} className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 rounded-2xl shadow-lg border border-white/10 p-6 space-y-4
-              transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#60caba]/20 hover:border-[#60caba]/50">
+            <div 
+                key={user._id} 
+                className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 rounded-2xl shadow-lg border border-white/10 p-6 space-y-4
+                transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#60caba]/20 hover:border-[#60caba]/50 cursor-pointer"
+                onClick={() => openEditModal(user)}
+            >
               <div className="flex items-center space-x-3"><div className="bg-gradient-to-br from-[#60caba]/80 to-[#FFD700]/80 rounded-full w-12 h-12 flex items-center justify-center text-lg">{getGenderIcon(user.gender)}</div><div><h3 className="font-bold text-gray-100 text-lg">{user.name}</h3><span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.role === 'admin' ? 'bg-red-500/20 text-red-300' : 'bg-teal-500/20 text-teal-300'}`}>{user.role}</span></div></div>
               <p className="text-sm text-gray-400">{user.email}</p>
-              <div className="flex space-x-2 pt-4 border-t border-white/10"><button onClick={() => openEditModal(user)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg transition-colors text-sm font-medium">Editar</button><button onClick={() => deleteUser(user._id)} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg transition-colors text-sm font-medium">Eliminar</button></div>
+              {/* --- ✅ CAMBIO 1: Se mantienen los botones en la tarjeta --- */}
+              <div className="flex space-x-2 pt-4 border-t border-white/10">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); openEditModal(user); }} 
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg transition-colors text-sm font-medium"
+                >
+                  Editar
+                </button>
+                <button 
+                  onClick={(e) => deleteUser(e, user._id)} 
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg transition-colors text-sm font-medium"
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -157,7 +237,6 @@ const UsersAdmin: React.FC = () => {
         <div className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 rounded-2xl shadow-lg overflow-hidden border border-white/10 backdrop-blur-sm">
           <div className="overflow-x-auto">
               <table className="min-w-full">
-                {/* CAMBIO: Se eliminó la columna "Info Adicional" del encabezado */}
                 <thead className="bg-white/5 border-b border-white/10">
                     <tr>
                         <th className="text-left px-4 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Usuario</th>
@@ -167,7 +246,11 @@ const UsersAdmin: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/10">
                   {users.map((user) => (
-                    <tr key={user._id} className="hover:bg-white/5 transition-colors">
+                    <tr 
+                      key={user._id} 
+                      className="hover:bg-white/5 transition-colors cursor-pointer"
+                      onClick={() => openEditModal(user)}
+                    >
                       <td className="px-4 py-4">
                           <div className="flex items-center space-x-3">
                               <div className="bg-gradient-to-br from-[#60caba]/80 to-[#FFD700]/80 rounded-full h-10 w-10 flex-shrink-0 flex items-center justify-center text-lg">{getGenderIcon(user.gender)}</div>
@@ -178,10 +261,20 @@ const UsersAdmin: React.FC = () => {
                           </div>
                       </td>
                       <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${user.role === 'admin' ? 'bg-red-500/20 text-red-300' : 'bg-teal-500/20 text-teal-300'}`}>{user.role}</span></td>
-                      {/* CAMBIO: Se eliminó la celda 'td' que mostraba el teléfono */}
                       <td className="px-4 py-4 text-center space-x-2">
-                          <button onClick={() => openEditModal(user)} className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
-                          <button onClick={() => deleteUser(user._id)} className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                          {/* --- ✅ CAMBIO 2: Se mantienen los botones en la tabla --- */}
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openEditModal(user); }} 
+                            className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors"
+                          >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                          </button>
+                          <button 
+                            onClick={(e) => deleteUser(e, user._id)} 
+                            className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors"
+                          >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
                       </td>
                     </tr>
                   ))}

@@ -27,7 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="">
+    <div className="overflow-hidden">
       {/* 2. Este contenedor ahora se mueve basado en el estado 'isScrolled' */}
       <div
         className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${

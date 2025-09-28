@@ -21,9 +21,6 @@ const Header: React.FC = () => {
   };
 
   return (
-    // ===== CAMBIO REALIZADO AQUÍ =====
-    // Se eliminaron las clases "fixed" y "top-0".
-    // El posicionamiento ahora lo maneja el componente Layout.
     <header className="relative z-50 w-full backdrop-blur-lg bg-gradient-to-r from-[#0b0b0b]/95 via-[#151515]/90 to-[#0b0b0b]/95 border-b border-white/10 shadow-lg">
       <div className="container mx-auto px-3 py-5">
         <div className="flex items-center justify-between gap-4">
@@ -70,8 +67,8 @@ const Header: React.FC = () => {
               ))}
             </nav>
 
-            {/* User Actions */}
-            <div className="flex items-center gap-3">
+            {/* User Actions - ✅ CORRECCIÓN APLICADA AQUÍ */}
+            <div className="hidden lg:flex items-center gap-3">
               {/* User Authentication */}
               {user ? (
                 <div className="flex items-center gap-2">
@@ -135,7 +132,7 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Navigation */}
-        <nav className="lg:hidden mt-4 flex justify-center space-x-2 overflow-x-auto pb-2">
+        <nav className="lg:hidden mt-4 flex justify-start md:justify-center space-x-2 overflow-x-auto pb-2">
           {[
             { path: '/', label: 'Inicio', icon: '🏠' },
             { path: '/products', label: 'Productos', icon: '🛍️' },

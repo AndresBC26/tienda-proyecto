@@ -1,11 +1,12 @@
 // src/contexts/NotificationContext.tsx
 import React, { createContext, useContext, ReactNode } from 'react';
-import toast, { Toaster, ToastOptions } from 'react-hot-toast';
+import toast, { Toaster, ToastOptions, Toast, Renderable } from 'react-hot-toast';
 
 type NotificationType = 'success' | 'error' | 'info';
 
+// Definimos que el mensaje puede ser un nodo de React o una función que devuelve uno
 interface NotificationContextType {
-  notify: (message: string, type?: NotificationType, options?: ToastOptions) => void;
+  notify: (message: Renderable | ((t: Toast) => Renderable), type?: NotificationType, options?: ToastOptions) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -19,7 +20,7 @@ export const useNotification = () => {
 };
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const notify = (message: string, type: NotificationType = 'info', options: ToastOptions = {}) => {
+  const notify = (message: Renderable | ((t: Toast) => Renderable), type: NotificationType = 'info', options: ToastOptions = {}) => {
     const toastOptions: ToastOptions = {
       duration: 4000,
       position: 'top-center',
@@ -35,6 +36,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       ...options,
     };
 
+    // ========================================================================
+    // =====                ✅ INICIO DE LA CORRECCIÓN FINAL                =====
+    // ========================================================================
+
+    // La función genérica toast() es la única que acepta una función como argumento.
+    // Los otros (success, error) solo aceptan string o JSX.
+    if (typeof message === 'function') {
+      toast(message, toastOptions);
+      return;
+    }
+
+    // Para los demás casos, usamos el switch.
     switch (type) {
       case 'success':
         toast.success(message, {
@@ -59,6 +72,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         toast(message, toastOptions);
         break;
     }
+    
+    // ========================================================================
+    // =====                 FIN DE LA CORRECCIÓN FINAL                   =====
+    // ========================================================================
   };
 
   return (

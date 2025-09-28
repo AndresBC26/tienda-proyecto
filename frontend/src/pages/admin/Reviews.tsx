@@ -1,6 +1,8 @@
 // src/pages/admin/Reviews.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNotification } from "../../contexts/NotificationContext"; // 1. Importar hook
+import toast, { Toast } from "react-hot-toast"; // 2. Importar toast
 
 interface Review {
   _id: string;
@@ -19,8 +21,8 @@ const ReviewsAdmin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const { notify } = useNotification(); // 3. Inicializar hook
 
-  // ✅ SOLUCIÓN CORRECTA PARA CREATE REACT APP
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
@@ -47,18 +49,57 @@ const ReviewsAdmin: React.FC = () => {
     }
   };
 
-  const handleDelete = async (reviewId: string) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta reseña?")) {
-      try {
-        await axios.delete(`${API_URL}/api/reviews/${reviewId}`);
-        setReviews(reviews.filter(review => review._id !== reviewId));
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-        console.error("Error deleting review:", err);
-        alert(`Error al eliminar la reseña: ${errorMessage}`);
-      }
+  // ========================================================================
+  // =====         ✅ INICIO DE LA MEJORA EN LAS ALERTAS                 =====
+  // ========================================================================
+
+  const handleConfirmDelete = async (reviewId: string) => {
+    try {
+      await axios.delete(`${API_URL}/api/reviews/${reviewId}`);
+      setReviews(reviews.filter(review => review._id !== reviewId));
+      notify('Reseña eliminada exitosamente.', 'success');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      console.error("Error deleting review:", err);
+      notify(`Error al eliminar la reseña: ${errorMessage}`, 'error');
     }
   };
+  
+  const handleDelete = (reviewId: string) => {
+    notify(
+      (t: Toast) => (
+        <div className="text-white p-2">
+          <p className="font-bold mb-2">¿Confirmas la eliminación?</p>
+          <p className="text-sm text-gray-400 mb-4">La reseña se borrará permanentemente.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                handleConfirmDelete(reviewId);
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              Eliminar
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ),
+      'info',
+      {
+        duration: 6000,
+      }
+    );
+  };
+  
+  // ========================================================================
+  // =====          FIN DE LA MEJORA EN LAS ALERTAS                     =====
+  // ========================================================================
 
   const renderStars = (rating: number) => {
     return [...Array(5)].map((_, i) => (

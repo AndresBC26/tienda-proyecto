@@ -2,8 +2,32 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-export interface Size { _id?: string; size: string; stock: number; }
-export interface Product { _id: string; name: string; description: string; price: number; category: string; image: string; stock?: number; rating: number; reviewCount: number; sizes: Size[]; }
+// --- ✅ [CORRECCIÓN] Definimos y exportamos las nuevas interfaces aquí ---
+export interface Size {
+  _id?: string;
+  size: string;
+  stock: number;
+}
+
+export interface Variant {
+  colorName: string;
+  colorHex: string;
+  images: string[];
+  sizes: Size[];
+}
+
+export interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  // El campo 'variants' reemplaza a 'image' y 'sizes'
+  variants: Variant[]; 
+}
+// -----------------------------------------------------------------
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -14,7 +38,6 @@ export const useProducts = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // ✅ SOLUCIÓN: Se añade una URL de respaldo para el entorno de desarrollo.
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
         
         const response = await axios.get(`${apiUrl}/api/products`);

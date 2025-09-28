@@ -1,6 +1,8 @@
 // src/pages/admin/Messages.tsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNotification } from '../../contexts/NotificationContext'; // 1. Importar hook
+import toast, { Toast } from 'react-hot-toast'; // 2. Importar toast
 
 interface Message {
   _id: string;
@@ -17,8 +19,8 @@ const MessagesAdmin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const { notify } = useNotification(); // 3. Inicializar hook
 
-  // ✅ SOLUCIÓN CORRECTA PARA CREATE REACT APP
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
@@ -33,7 +35,6 @@ const MessagesAdmin: React.FC = () => {
       const res = await axios.get(`${API_URL}/api/contact`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // Ordenar los mensajes por fecha, los más recientes primero
       const sortedMessages = res.data.sort((a: Message, b: Message) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -46,20 +47,59 @@ const MessagesAdmin: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('¿Seguro que quieres eliminar este mensaje?')) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`${API_URL}/api/contact/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        setMessages(messages.filter(m => m._id !== id));
-        setSelectedMessage(null);
-      } catch (err) {
-        alert('Error al eliminar el mensaje.');
-      }
+  // ========================================================================
+  // =====         ✅ INICIO DE LA MEJORA EN LAS ALERTAS                 =====
+  // ========================================================================
+
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/contact/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setMessages(messages.filter(m => m._id !== id));
+      setSelectedMessage(null); // Deseleccionar el mensaje si se borra
+      notify('Mensaje eliminado correctamente.', 'success');
+    } catch (err) {
+      notify('Error al eliminar el mensaje.', 'error');
     }
   };
+
+  const handleDelete = (id: string) => {
+    notify(
+      (t: Toast) => (
+        <div className="text-white p-2">
+          <p className="font-bold mb-2">¿Confirmas la eliminación?</p>
+          <p className="text-sm text-gray-400 mb-4">El mensaje se borrará para siempre.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                handleConfirmDelete(id);
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              Eliminar
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ),
+      'info',
+      {
+        duration: 6000,
+      }
+    );
+  };
+  
+  // ========================================================================
+  // =====          FIN DE LA MEJORA EN LAS ALERTAS                     =====
+  // ========================================================================
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString('es-ES', {
     day: '2-digit',
@@ -83,7 +123,6 @@ const MessagesAdmin: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 p-6 mb-6 rounded-2xl shadow-lg border border-white/10 backdrop-blur-sm">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent flex items-center gap-3">
             <div className="bg-gradient-to-r from-[#60caba]/80 to-[#FFD700]/80 p-3 rounded-xl">
@@ -97,7 +136,6 @@ const MessagesAdmin: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Lista de Mensajes */}
         <div className="md:col-span-1 bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 rounded-2xl shadow-lg border border-white/10 p-4 space-y-3 h-[75vh] overflow-y-auto">
           {messages.length === 0 ? (
             <p className="text-gray-500 text-center pt-10">No hay mensajes.</p>
@@ -123,7 +161,6 @@ const MessagesAdmin: React.FC = () => {
           )}
         </div>
 
-        {/* Vista del Mensaje Seleccionado */}
         <div className="md:col-span-2 bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 rounded-2xl shadow-lg border border-white/10 p-6 h-[75vh] flex flex-col">
           {selectedMessage ? (
             <>

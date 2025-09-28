@@ -1,15 +1,30 @@
 // src/contexts/AuthContext.tsx
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface AuthState { isAuthenticated: boolean; user: { _id: string; name: string; email: string; role: 'user' | 'admin'; } | null; loading: boolean; }
-interface AuthContextType extends AuthState { login: (credentials: any) => Promise<any>; logout: () => void; setCartDispatch: (dispatch: React.Dispatch<any>) => void; }
+// Interfaces para definir los tipos de datos
+interface AuthState {
+  isAuthenticated: boolean;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    role: 'user' | 'admin';
+  } | null;
+  loading: boolean;
+}
+
+// 🔹 CORRECCIÓN: Se añade 'loginWithGoogle' y 'updateUserData' a la interfaz
+interface AuthContextType extends AuthState {
+  login: (credentials: any) => Promise<any>;
+  loginWithGoogle: (token: string) => Promise<any>; // <-- AÑADIDO
+  logout: () => void;
+  updateUserData: (data: { user: any; token: string }) => void;
+  setCartDispatch: (dispatch: React.Dispatch<any>) => void;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_URL = process.env.REACT_APP_API_URL;
-
-// Usamos una variable externa para evitar que múltiples refrescos inicien la verificación a la vez
 let isCheckingSession = false;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -22,17 +37,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const checkSession = async () => {
-      // 1. MEJORA: Si ya se está verificando la sesión, no hacemos nada.
-      if (isCheckingSession) {
-        return;
-      }
+      if (isCheckingSession) return;
       
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          // Marcamos que la verificación ha comenzado
           isCheckingSession = true;
-
           if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada. Revisa tu archivo .env");
 
           const res = await fetch(`${API_URL}/api/users/me`, {
@@ -43,17 +53,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const user = await res.json();
             setAuthState({ isAuthenticated: true, user, loading: false });
           } else {
-            // Si la respuesta no es OK, el token es inválido, así que lo borramos.
             localStorage.removeItem('token');
             setAuthState({ isAuthenticated: false, user: null, loading: false });
           }
         } catch (error) {
-          // 2. MEJORA: Si hay un error de red, NO borramos el token.
-          // Simplemente dejamos de cargar, pero el token sigue ahí para el próximo intento.
           console.error("Fallo al verificar la sesión (posiblemente por red):", error);
           setAuthState(prev => ({ ...prev, loading: false }));
         } finally {
-          // Al final (éxito o fallo), marcamos que la verificación ha terminado.
           isCheckingSession = false;
         }
       } else {
@@ -80,6 +86,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return data.user;
   };
 
+  // --- FUNCIÓN NUEVA PARA GOOGLE LOGIN ---
+  const loginWithGoogle = async (token: string) => {
+    if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada.");
+
+    const res = await fetch(`${API_URL}/api/users/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.message || 'Error en el inicio de sesión con Google');
+    
+    localStorage.setItem('token', data.token);
+    setAuthState({ isAuthenticated: true, user: data.user, loading: false });
+    return data.user;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setAuthState({ isAuthenticated: false, user: null, loading: false });
@@ -88,12 +113,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateUserData = (data: { user: any; token: string }) => {
+    localStorage.setItem('token', data.token);
+    setAuthState(prevState => ({
+      ...prevState,
+      user: data.user,
+    }));
+  };
+
   const setDispatch = (dispatch: React.Dispatch<any>) => {
     setCartDispatch(() => dispatch);
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, logout, setCartDispatch: setDispatch }}>
+    <AuthContext.Provider value={{ ...authState, login, loginWithGoogle, logout, updateUserData, setCartDispatch: setDispatch }}>
       {children}
     </AuthContext.Provider>
   );

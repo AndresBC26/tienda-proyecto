@@ -27,6 +27,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ProfilePage from './pages/ProfilePage';
+// ===== NUEVAS PÁGINAS AÑADIDAS =====
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // ===== PÁGINAS DE PAGO (NUEVAS) =====
 import CheckoutPage from './pages/CheckoutPage';
@@ -79,6 +82,10 @@ const AppContent: React.FC = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+      {/* ===== RUTAS NUEVAS AÑADIDAS AQUÍ ===== */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      {/* ===================================== */}
 
       {/* --- RUTA PROTEGIDA PARA USUARIOS LOGUEADOS --- */}
       <Route element={<UserPrivateRoute />}>

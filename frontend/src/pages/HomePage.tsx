@@ -1,7 +1,11 @@
-// src/pages/Homepage.tsx
+// src/pages/HomePage.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
+
+// --- ✅ CAMBIO 1: Se importa el nuevo ícono BiSolidLayer ---
+import { BiSolidTShirt, BiSolidLayer, BiSolidPalette } from "react-icons/bi";
+
 
 const FeaturedProductsCarousel: React.FC = () => {
   const [currentProduct, setCurrentProduct] = useState(0);
@@ -55,7 +59,10 @@ const FeaturedProductsCarousel: React.FC = () => {
           className="flex transition-transform duration-500 ease-in-out"
           style={{ transform: `translateX(-${currentProduct * 100}%)` }}
         >
-          {featuredProducts.map((product) => (
+          {featuredProducts.map((product) => {
+            const displayImage = product.variants?.[0]?.images?.[0] || 'https://via.placeholder.com/400';
+            
+            return(
             <div key={product._id} className="w-full flex-shrink-0 p-6 lg:p-8">
               <div className="grid lg:grid-cols-2 gap-6 items-center">
                 {/* Imagen del Producto */}
@@ -64,7 +71,7 @@ const FeaturedProductsCarousel: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-br from-[#60caba]/20 via-transparent to-[#FFD700]/20"></div>
                     <div className="relative z-10 w-full h-full flex items-center justify-center">
                       <img
-                        src={product.image}
+                        src={displayImage}
                         alt={product.name}
                         className="max-w-full max-h-full object-contain rounded-lg"
                       />
@@ -80,15 +87,12 @@ const FeaturedProductsCarousel: React.FC = () => {
                   <div className="text-xs text-[#60caba] font-semibold mb-1">
                     {product.category}
                   </div>
-
                   <h3 className="text-2xl lg:text-3xl font-bold text-gray-100 mb-3">
                     {product.name}
                   </h3>
-
                   <p className="text-gray-400 text-base mb-4 leading-relaxed line-clamp-2">
                     {product.description}
                   </p>
-
                   <div className="flex items-center justify-center lg:justify-start gap-3 mb-6">
                     <span className="text-2xl font-bold bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
                       ${product.price.toLocaleString('es-CO')}
@@ -100,7 +104,6 @@ const FeaturedProductsCarousel: React.FC = () => {
                       -20%
                     </span>
                   </div>
-
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Link
                       to={`/product/${product._id}`}
@@ -115,7 +118,7 @@ const FeaturedProductsCarousel: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
@@ -137,7 +140,7 @@ const FeaturedProductsCarousel: React.FC = () => {
 
       {/* Flechas de Navegación */}
       {featuredProducts.length > 1 && (
-         <>
+          <>
             <button
                 onClick={() => setCurrentProduct((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length)}
                 className="absolute left-0 lg:-left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-black/70 hover:border-white/30 transition-all duration-300"
@@ -153,8 +156,8 @@ const FeaturedProductsCarousel: React.FC = () => {
             >
                 →
             </button>
-         </>
-       )}
+          </>
+        )}
     </div>
   );
 };
@@ -265,56 +268,63 @@ const Homepage: React.FC = () => {
       </span>
     </h2>
 
-    {/* Ahora ocupan más espacio */}
     <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto w-full">
       {[
+        // --- ✅ CAMBIO 2: Se asignan los iconos sugeridos a cada categoría ---
         {
-          name: 'Overzide',
-          icon: '🔥',
+          name: 'Oversize',
+          Icon: BiSolidTShirt,
           gradient: 'from-[#60caba]/80 to-[#58b7a9]/80',
-          description: 'Estilo urbano contemporáneo'
+          description: 'Estilo urbano contemporáneo',
+          categoryValue: 'Camisetas Oversize'
         },
         {
-          name: 'Basicas',
-          icon: '👔',
+          name: 'Básicas',
+          Icon: BiSolidLayer,
           gradient: 'from-[#ec4899]/80 to-[#be185d]/80',
-          description: 'Cómodo y con actitud'
+          description: 'Cómodo y con actitud',
+          categoryValue: 'Camisetas Basicas'
         },
         {
           name: 'Estampadas',
-          icon: '🎨',
+          Icon: BiSolidPalette,
           gradient: 'from-[#60caba]/60 to-[#FFD700]/60',
-          description: 'Diseños exclusivos y únicos'
+          description: 'Diseños exclusivos y únicos',
+          categoryValue: 'Camisetas Estampadas'
         }
-      ].map((category, index) => (
-        <Link
-          key={index}
-          to="/products"
-          className="group relative overflow-hidden bg-white/5 backdrop-blur-sm 
-                     border border-white/10 rounded-2xl p-8 h-64 
-                     flex flex-col items-center justify-center 
-                     hover:bg-white/10 hover:border-white/20 
-                     transition-all duration-300 transform hover:scale-105 w-full"
-        >
-          <div
-            className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300`}
-          ></div>
+      ].map((category, index) => {
+        const Icon = category.Icon;
+        return (
+          <Link
+            key={index}
+            to={`/products?category=${encodeURIComponent(category.categoryValue)}`}
+            className="group relative overflow-hidden bg-white/5 backdrop-blur-sm 
+                         border border-white/10 rounded-2xl p-8 h-64 
+                         flex flex-col items-center justify-center 
+                         hover:bg-white/10 hover:border-white/20 
+                         transition-all duration-300 transform hover:scale-105 w-full"
+          >
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300`}
+            ></div>
 
-          <div className="relative z-10 text-center">
-            <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
-              {category.icon}
+            <div className="relative z-10 text-center">
+              <div className="text-6xl text-white mb-4 group-hover:scale-110 transition-transform duration-300">
+                {/* --- ✅ CAMBIO 3: Se renderiza el componente del ícono --- */}
+                
+              </div>
+              <h3 className="text-xl font-bold text-gray-100 group-hover:text-white transition-colors duration-300 mb-2">
+                {category.name}
+              </h3>
+              <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                {category.description}
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-gray-100 group-hover:text-white transition-colors duration-300 mb-2">
-              {category.name}
-            </h3>
-            <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
-              {category.description}
-            </p>
-          </div>
 
-          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
-        </Link>
-      ))}
+            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+          </Link>
+        )
+      })}
     </div>
 
     <div className="mt-12 text-center max-w-3xl mx-auto">
