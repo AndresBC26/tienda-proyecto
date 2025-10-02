@@ -1,4 +1,4 @@
-// models/User.js
+// backend/models/User.js
 const mongoose = require('mongoose');
 
 const cartItemSchema = new mongoose.Schema({
@@ -22,13 +22,16 @@ const userSchema = new mongoose.Schema({
     ref: 'Product'
   }],
   cart: [cartItemSchema],
+  
+  // --- CAMPOS DE VERIFICACIÓN ---
+  // ASEGÚRATE DE QUE ESTAS DOS LÍNEAS ESTÉN AQUÍ
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
-
-  // ===== CAMPOS AÑADIDOS PARA RESETEO DE CONTRASEÑA =====
+  // ------------------------------------
+  
+  // ===== CAMPOS PARA RESETEO DE CONTRASEÑA =====
   resetPasswordToken: { type: String },
   resetPasswordExpire: { type: Date },
-  // =======================================================
 });
 
 module.exports = mongoose.model('User', userSchema);

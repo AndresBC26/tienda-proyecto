@@ -2,8 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
-
-// --- ✅ CAMBIO 1: Se importa el nuevo ícono BiSolidLayer ---
 import { BiSolidTShirt, BiSolidLayer, BiSolidPalette } from "react-icons/bi";
 
 
@@ -259,85 +257,213 @@ const Homepage: React.FC = () => {
         </div>
       </section>
 
-{/* Vista Previa de Categorías */}
-<section className="py-20 px-4 bg-gradient-to-r from-white/5 via-transparent to-white/5">
-  <div className="container mx-auto">
-    <h2 className="text-4xl font-bold text-center mb-16">
-      <span className="bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
-        Estilos Urbanos Destacados
-      </span>
-    </h2>
+{/* Vista Previa de Categorías - VERSIÓN MEJORADA */}
+<section className="py-20 px-4 bg-gradient-to-r from-white/5 via-transparent to-white/5 relative overflow-hidden">
+  {/* Elementos decorativos de fondo */}
+  <div className="absolute top-10 left-20 w-32 h-32 bg-[#60caba]/20 rounded-full blur-2xl animate-pulse"></div>
+  <div className="absolute bottom-20 right-10 w-48 h-48 bg-[#FFD700]/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-2 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-7xl mx-auto w-full">
+  <div className="container mx-auto relative z-10">
+    <div className="text-center mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold mb-4">
+        <span className="bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
+          Estilos Urbanos Destacados
+        </span>
+      </h2>
+      <div className="w-24 h-1 bg-gradient-to-r from-[#60caba] to-[#FFD700] mx-auto rounded-full mb-6"></div>
+      <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+        Descubre las tendencias que definen el streetwear moderno
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
       {[
-        // --- ✅ CAMBIO 2: Se asignan los iconos sugeridos a cada categoría ---
         {
           name: 'Oversize',
-          Icon: BiSolidTShirt,
+          image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=400&fit=crop&crop=center',
           gradient: 'from-[#60caba]/80 to-[#58b7a9]/80',
+          hoverGradient: 'from-[#60caba] to-[#58b7a9]',
           description: 'Estilo urbano contemporáneo',
-          categoryValue: 'Camisetas Oversize'
+          subtitle: 'Comodidad y tendencia',
+          categoryValue: 'Camisetas Oversize',
+          badge: 'MÁS VENDIDO',
+          badgeColor: 'from-[#FFD700] to-[#F59E0B]',
+          priceFrom: '35.000',
+          bgPattern: 'conic-gradient(from 0deg, #60caba20, transparent, #60caba10, transparent)',
+          emoji: '🔥'
         },
         {
           name: 'Básicas',
-          Icon: BiSolidLayer,
+          image: 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&h=400&fit=crop&crop=center',
           gradient: 'from-[#ec4899]/80 to-[#be185d]/80',
+          hoverGradient: 'from-[#ec4899] to-[#be185d]',
           description: 'Cómodo y con actitud',
-          categoryValue: 'Camisetas Basicas'
+          subtitle: 'Los esenciales urbanos',
+          categoryValue: 'Camisetas Basicas',
+          badge: 'MEJOR PRECIO',
+          badgeColor: 'from-[#10B981] to-[#059669]',
+          priceFrom: '25.000',
+          bgPattern: 'conic-gradient(from 120deg, #ec489920, transparent, #ec489910, transparent)',
+          emoji: '⚡'
         },
         {
           name: 'Estampadas',
-          Icon: BiSolidPalette,
-          gradient: 'from-[#60caba]/60 to-[#FFD700]/60',
+          image: 'https://images.unsplash.com/photo-1576871337622-98d48d1cf531?w=400&h=400&fit=crop&crop=center',
+          gradient: 'from-[#8b5cf6]/60 to-[#FFD700]/60',
+          hoverGradient: 'from-[#8b5cf6] to-[#FFD700]',
           description: 'Diseños exclusivos y únicos',
-          categoryValue: 'Camisetas Estampadas'
+          subtitle: 'Expresa tu personalidad',
+          categoryValue: 'Camisetas Estampadas',
+          badge: 'EDICIÓN LIMITADA',
+          badgeColor: 'from-[#8B5CF6] to-[#7C3AED]',
+          priceFrom: '45.000',
+          bgPattern: 'conic-gradient(from 240deg, #8b5cf620, transparent, #FFD70020, transparent)',
+          emoji: '🎨'
         }
       ].map((category, index) => {
-        const Icon = category.Icon;
         return (
           <Link
             key={index}
             to={`/products?category=${encodeURIComponent(category.categoryValue)}`}
             className="group relative overflow-hidden bg-white/5 backdrop-blur-sm 
-                         border border-white/10 rounded-2xl p-8 h-64 
-                         flex flex-col items-center justify-center 
-                         hover:bg-white/10 hover:border-white/20 
-                         transition-all duration-300 transform hover:scale-105 w-full"
+                       border border-white/10 rounded-3xl p-8 h-80 
+                       flex flex-col justify-between
+                       hover:bg-white/10 hover:border-white/20 hover:shadow-2xl
+                       transition-all duration-500 transform hover:scale-105 hover:-translate-y-2"
+            style={{
+              animationDelay: `${index * 200}ms`
+            }}
           >
-            <div
-              className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300`}
+            {/* Patrón de fondo animado */}
+            <div 
+              className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity duration-500"
+              style={{ background: category.bgPattern }}
             ></div>
 
-            <div className="relative z-10 text-center">
-              <div className="text-6xl text-white mb-4 group-hover:scale-110 transition-transform duration-300">
-                {/* --- ✅ CAMBIO 3: Se renderiza el componente del ícono --- */}
-                
+            {/* Efecto de brillo en hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            {/* Gradiente de hover */}
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-20 transition-all duration-500`}
+            ></div>
+
+            {/* Contenido superior */}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-6">
+                <div className={`relative w-16 h-16 bg-gradient-to-r ${category.hoverGradient} rounded-2xl flex items-center justify-center 
+                                group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg overflow-hidden`}>
+                  {/* Imagen de la camiseta */}
+                  <img 
+                    src={category.image} 
+                    alt={`${category.name} style`}
+                    className="w-full h-full object-cover rounded-2xl group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  {/* Overlay con gradiente */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-30 group-hover:opacity-50 transition-opacity duration-300`}></div>
+                </div>
+                <div className="text-2xl group-hover:animate-bounce">
+                  {category.emoji}
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-100 group-hover:text-white transition-colors duration-300 mb-2">
-                {category.name}
-              </h3>
-              <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
-                {category.description}
-              </p>
+
+              <div>
+                <h3 className="text-2xl font-bold text-gray-100 group-hover:text-white transition-colors duration-300 mb-2">
+                  {category.name}
+                </h3>
+                <p className="text-sm font-medium text-[#60caba] group-hover:text-[#FFD700] transition-colors duration-300 mb-2">
+                  {category.subtitle}
+                </p>
+                <p className="text-gray-400 group-hover:text-gray-300 transition-colors duration-300 text-sm leading-relaxed">
+                  {category.description}
+                </p>
+              </div>
             </div>
 
-            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
+            {/* Contenido inferior */}
+            <div className="relative z-10 flex items-center justify-between">
+              {/* Badge y precio */}
+              <div className="flex flex-col space-y-2">
+                <div className={`px-3 py-1 bg-gradient-to-r ${category.badgeColor} rounded-full`}>
+                  <span className="text-xs font-bold text-white tracking-wide">{category.badge}</span>
+                </div>
+                <div className="flex items-baseline space-x-1">
+                  <span className="text-xs text-gray-500 font-medium">Desde</span>
+                  <span className="text-lg font-bold bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
+                    ${category.priceFrom}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Botón de acción mejorado */}
+              <div className="flex items-center text-gray-400 group-hover:text-white transition-colors duration-300">
+                <span className="text-sm font-semibold mr-3">Ver Todo</span>
+                <div className="relative w-8 h-8 rounded-full border-2 border-current flex items-center justify-center 
+                               group-hover:scale-110 group-hover:border-[#FFD700] group-hover:bg-[#FFD700]/10 
+                               transition-all duration-300 overflow-hidden">
+                  {/* Efecto de onda en hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#60caba] to-[#FFD700] opacity-0 group-hover:opacity-20 rounded-full"></div>
+                  <span className="text-sm transform group-hover:translate-x-1 transition-transform duration-300 relative z-10">→</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Efecto de partículas en hover */}
+            <div className="absolute top-4 right-4 w-2 h-2 bg-[#FFD700] rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping"></div>
+            <div className="absolute bottom-8 left-6 w-1 h-1 bg-[#60caba] rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping delay-100"></div>
+            <div className="absolute top-1/2 right-8 w-1.5 h-1.5 bg-[#ec4899] rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping delay-200"></div>
           </Link>
         )
       })}
     </div>
 
-    <div className="mt-12 text-center max-w-3xl mx-auto">
-      <p className="text-lg text-gray-300 mb-6">
-        Explora nuestras categorías especializadas en camisetas urbanas, diseñadas para expresar tu estilo único en la ciudad.
-      </p>
-      <Link
-        to="/products"
-        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#60caba] to-[#FFD700] text-black font-semibold rounded-2xl hover:from-[#58b7a9] hover:to-[#E6C600] transition-all duration-300 transform hover:scale-105"
-      >
-        <span>Ver Todas las Categorías</span>
-        <span className="ml-2">→</span>
-      </Link>
+    {/* Sección inferior mejorada */}
+    <div className="mt-16 text-center">
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-4xl mx-auto">
+        <div className="flex items-center justify-center mb-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-[#60caba] rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-[#FFD700] rounded-full animate-pulse delay-200"></div>
+            <div className="w-3 h-3 bg-[#ec4899] rounded-full animate-pulse delay-500"></div>
+          </div>
+        </div>
+        
+        <h3 className="text-2xl font-bold text-white mb-4">
+          Encuentra tu estilo perfecto
+        </h3>
+        <p className="text-gray-300 mb-6 leading-relaxed max-w-2xl mx-auto">
+          Cada categoría está cuidadosamente curada para ofrecerte lo mejor del streetwear urbano. 
+          Desde lo minimalista hasta lo más expresivo, tenemos el estilo que buscas.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <Link
+            to="/products"
+            className="group inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#60caba] to-[#FFD700] text-black font-bold rounded-2xl 
+                       hover:from-[#58b7a9] hover:to-[#E6C600] transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            <span>Ver Toda la Colección</span>
+            <div className="ml-3 w-6 h-6 rounded-full bg-black/20 flex items-center justify-center 
+                           group-hover:bg-black/30 group-hover:scale-110 transition-all duration-300">
+              <span className="text-sm transform group-hover:translate-x-0.5 transition-transform duration-300">→</span>
+            </div>
+          </Link>
+          
+          <div className="flex items-center space-x-4 text-sm text-gray-400">
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              <span>750+ productos</span>
+            </div>
+            <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+              <span>Nuevos arrivals</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>

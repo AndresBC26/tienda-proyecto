@@ -1,25 +1,30 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Interfaces para definir los tipos de datos
-interface AuthState {
-  isAuthenticated: boolean;
-  user: {
-    _id: string;
-    name: string;
-    email: string;
-    role: 'user' | 'admin';
-  } | null;
-  loading: boolean;
+// 1. Define la interfaz UserData para un mejor tipado
+interface UserData {
+  _id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
 }
 
-// 🔹 CORRECCIÓN: Se añade 'loginWithGoogle' y 'updateUserData' a la interfaz
+interface AuthState {
+  isAuthenticated: boolean;
+  user: UserData | null;
+  loading: boolean;
+}
+
+// 2. Define el AuthContextType incluyendo la nueva función authenticateUser
 interface AuthContextType extends AuthState {
-  login: (credentials: any) => Promise<any>;
-  loginWithGoogle: (token: string) => Promise<any>; // <-- AÑADIDO
-  logout: () => void;
-  updateUserData: (data: { user: any; token: string }) => void;
-  setCartDispatch: (dispatch: React.Dispatch<any>) => void;
+  login: (credentials: any) => Promise<any>;
+  loginWithGoogle: (token: string) => Promise<any>;
+  logout: () => void;
+  // Usamos UserData en updateUserData y en la nueva función
+  updateUserData: (data: { user: UserData; token: string }) => void;
+  setCartDispatch: (dispatch: React.Dispatch<any>) => void;
+  // 🔑 FUNCIÓN CLAVE: Para auto-login (verifica email)
+  authenticateUser: (token: string, user: UserData) => void; 
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,114 +33,123 @@ const API_URL = process.env.REACT_APP_API_URL;
 let isCheckingSession = false;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    user: null,
-    loading: true,
-  });
-  const [cartDispatch, setCartDispatch] = useState<React.Dispatch<any> | null>(null);
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    user: null,
+    loading: true,
+  });
+  const [cartDispatch, setCartDispatch] = useState<React.Dispatch<any> | null>(null);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      if (isCheckingSession) return;
-      
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          isCheckingSession = true;
-          if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada. Revisa tu archivo .env");
+  // 3. Implementación de authenticateUser
+  const authenticateUser = (token: string, user: UserData) => {
+    localStorage.setItem('token', token);
+    setAuthState({ isAuthenticated: true, user: user, loading: false });
+  };
 
-          const res = await fetch(`${API_URL}/api/users/me`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
+  useEffect(() => {
+    const checkSession = async () => {
+      if (isCheckingSession) return;
+      
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          isCheckingSession = true;
+          if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada. Revisa tu archivo .env");
 
-          if (res.ok) {
-            const user = await res.json();
-            setAuthState({ isAuthenticated: true, user, loading: false });
-          } else {
-            localStorage.removeItem('token');
-            setAuthState({ isAuthenticated: false, user: null, loading: false });
-          }
-        } catch (error) {
-          console.error("Fallo al verificar la sesión (posiblemente por red):", error);
-          setAuthState(prev => ({ ...prev, loading: false }));
-        } finally {
-          isCheckingSession = false;
-        }
-      } else {
-        setAuthState({ isAuthenticated: false, user: null, loading: false });
-      }
-    };
-    checkSession();
-  }, []);
+          // Asegúrate de que este endpoint '/api/users/me' devuelve la estructura UserData
+          const res = await fetch(`${API_URL}/api/users/me`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
 
-  const login = async (credentials: any) => {
-    if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada. Revisa tu archivo .env");
-    
-    const res = await fetch(`${API_URL}/api/users/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
-    });
+          if (res.ok) {
+            const user: UserData = await res.json(); // Tipamos el resultado
+            setAuthState({ isAuthenticated: true, user, loading: false });
+          } else {
+            localStorage.removeItem('token');
+            setAuthState({ isAuthenticated: false, user: null, loading: false });
+          }
+        } catch (error) {
+          console.error("Fallo al verificar la sesión (posiblemente por red):", error);
+          setAuthState(prev => ({ ...prev, loading: false }));
+        } finally {
+          isCheckingSession = false;
+        }
+      } else {
+        setAuthState({ isAuthenticated: false, user: null, loading: false });
+      }
+    };
+    checkSession();
+  }, []);
 
-    const data = await res.json(); 
+  // --- FUNCIÓN PARA INICIO DE SESIÓN CON CREDENCIALES ---
+  const login = async (credentials: any) => {
+    if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada. Revisa tu archivo .env");
+    
+    const res = await fetch(`${API_URL}/api/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
 
-    if (!res.ok) throw new Error(data.message || 'Credenciales inválidas');
-    localStorage.setItem('token', data.token);
-    setAuthState({ isAuthenticated: true, user: data.user, loading: false });
-    return data.user;
-  };
+    const data = await res.json(); 
 
-  // --- FUNCIÓN NUEVA PARA GOOGLE LOGIN ---
-  const loginWithGoogle = async (token: string) => {
-    if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada.");
+    if (!res.ok) throw new Error(data.message || 'Credenciales inválidas');
+    
+    // Usamos authenticateUser para manejar el guardado del estado
+    authenticateUser(data.token, data.user);
+    return data.user;
+  };
 
-    const res = await fetch(`${API_URL}/api/users/google-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
+  // --- FUNCIÓN PARA GOOGLE LOGIN ---
+  const loginWithGoogle = async (token: string) => {
+    if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada.");
 
-    const data = await res.json();
+    const res = await fetch(`${API_URL}/api/users/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
 
-    if (!res.ok) throw new Error(data.message || 'Error en el inicio de sesión con Google');
-    
-    localStorage.setItem('token', data.token);
-    setAuthState({ isAuthenticated: true, user: data.user, loading: false });
-    return data.user;
-  };
+    const data = await res.json();
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setAuthState({ isAuthenticated: false, user: null, loading: false });
-    if (cartDispatch) {
-      cartDispatch({ type: 'CLEAR_CART' });
-    }
-  };
+    if (!res.ok) throw new Error(data.message || 'Error en el inicio de sesión con Google');
+    
+    // Usamos authenticateUser para manejar el guardado del estado
+    authenticateUser(data.token, data.user);
+    return data.user;
+  };
 
-  const updateUserData = (data: { user: any; token: string }) => {
-    localStorage.setItem('token', data.token);
-    setAuthState(prevState => ({
-      ...prevState,
-      user: data.user,
-    }));
-  };
+  const logout = () => {
+    localStorage.removeItem('token');
+    setAuthState({ isAuthenticated: false, user: null, loading: false });
+    if (cartDispatch) {
+      cartDispatch({ type: 'CLEAR_CART' });
+    }
+  };
 
-  const setDispatch = (dispatch: React.Dispatch<any>) => {
-    setCartDispatch(() => dispatch);
-  };
+  const updateUserData = (data: { user: UserData; token: string }) => {
+    localStorage.setItem('token', data.token);
+    setAuthState(prevState => ({
+      ...prevState,
+      user: data.user,
+    }));
+  };
 
-  return (
-    <AuthContext.Provider value={{ ...authState, login, loginWithGoogle, logout, updateUserData, setCartDispatch: setDispatch }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const setDispatch = (dispatch: React.Dispatch<any>) => {
+    setCartDispatch(() => dispatch);
+  };
+
+  return (
+    <AuthContext.Provider value={{ ...authState, login, loginWithGoogle, logout, updateUserData, setCartDispatch: setDispatch, authenticateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
-  return context;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  }
+  return context;
 };

@@ -9,7 +9,8 @@ import { useNotification } from '../contexts/NotificationContext';
 import ProductCard from '../components/shop/ProductCard';
 import Loading from '../components/common/Loading';
 import axios from 'axios';
-import { Star, Truck, Shield, RefreshCw, ChevronDown } from 'lucide-react';
+import { Star, Truck, Shield, RefreshCw, ChevronDown, Share2 } from 'lucide-react';
+import { brandConfig } from '../utils/brandConfig';
 
 interface ProductReview {
     _id: string;
@@ -67,7 +68,6 @@ const ProductDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     
-    // --- Estados para manejar variantes de color y talla ---
     const [selectedColor, setSelectedColor] = useState<Variant | null>(null);
     const [selectedSize, setSelectedSize] = useState<string>('');
     const [currentImage, setCurrentImage] = useState('');
@@ -78,6 +78,9 @@ const ProductDetailPage: React.FC = () => {
     const [userRating, setUserRating] = useState(0);
     const [userComment, setUserComment] = useState('');
     const addToCartBtnRef = useRef<HTMLButtonElement>(null);
+    
+    const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+    const shareMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const fetchProductAndReviews = async () => {
@@ -109,6 +112,16 @@ const ProductDetailPage: React.FC = () => {
         };
         fetchProductAndReviews();
     }, [id, products, productsLoading, favoritesState.items]);
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+                setIsShareMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleColorSelect = (variant: Variant) => {
         setSelectedColor(variant);
@@ -244,36 +257,65 @@ const ProductDetailPage: React.FC = () => {
     const shouldTruncate = longDescription.length > 200;
     const displayedDescription = isDescriptionExpanded ? longDescription : shouldTruncate ? longDescription.slice(0, 200) + '...' : longDescription;
 
+    const productUrl = window.location.href;
+    const shareText = `¡Mira esta increíble camiseta de ${brandConfig.name}: ${product.name}!`;
+    const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
+    const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)} ${encodeURIComponent(productUrl)}`;
+    const instagramUrl = brandConfig.social.instagram;
+
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-300 pt-20">
             <div className="container mx-auto px-4 sm:px-6 py-8">
                 <div className="grid lg:grid-cols-2 gap-12">
                     
-                    {/* COLUMNA 1: GALERÍA DE IMÁGENES */}
-                    <div>
-                        <div className="relative group aspect-square overflow-hidden rounded-2xl">
-                            {/* ======================================================================== */}
-                            {/* =====            ✅ INICIO DE LA CORRECCIÓN APLICADA             ===== */}
-                            {/* ======================================================================== */}
-                            <img 
-                                key={currentImage} 
-                                src={currentImage || '/placeholder.jpg'} 
-                                alt={`${product.name} - ${selectedColor?.colorName}`} 
-                                className="w-full h-full object-cover rounded-2xl transition-all duration-300 shadow-xl group-hover:scale-105"
-                            />
-                            {/* ======================================================================== */}
-                            {/* =====             FIN DE LA CORRECCIÓN APLICADA                  ===== */}
-                            {/* ======================================================================== */}
-                            <button onClick={toggleWishlist} className={`absolute top-4 right-4 p-3 rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-110 ${isWishlisted ? 'bg-red-500/30 text-red-400' : 'bg-black/40 text-gray-300'}`} type="button">
-                                <svg className="w-6 h-6" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                            </button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-4">
-                            {selectedColor?.images.map((img, index) => (
-                                <button key={index} onClick={() => setCurrentImage(img)} className={`w-16 h-16 rounded-lg border-2 transition-all duration-200 ${currentImage === img ? 'border-[#60caba]' : 'border-transparent hover:border-white/50'}`}>
-                                    <img src={img} alt={`Vista ${index + 1}`} className="w-full h-full object-cover rounded-md" />
-                                </button>
-                            ))}
+                    <div className="relative">
+                        <div className="sticky top-24">
+                            <div className="relative group aspect-square overflow-hidden rounded-2xl">
+                                <img 
+                                    key={currentImage} 
+                                    src={currentImage || '/placeholder.jpg'} 
+                                    alt={`${product.name} - ${selectedColor?.colorName}`} 
+                                    className="w-full h-full object-cover rounded-2xl transition-all duration-300 shadow-xl group-hover:scale-105"
+                                />
+                                {/* ===== INICIO DE LA CORRECCIÓN ===== */}
+                                <div ref={shareMenuRef} className="absolute top-4 right-4 flex flex-col items-center gap-2">
+                                    <button onClick={toggleWishlist} className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-110 ${isWishlisted ? 'bg-red-500/30 text-red-400' : 'bg-black/40 text-gray-300'}`} type="button" title="Añadir a favoritos">
+                                        <svg className="w-6 h-6" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                                    </button>
+                                    
+                                    <div className="relative">
+                                        <button onClick={() => setIsShareMenuOpen(!isShareMenuOpen)} className="p-3 rounded-full backdrop-blur-sm bg-black/40 text-gray-300 transition-all duration-300 transform hover:scale-110" type="button" title="Compartir">
+                                            <Share2 className="w-6 h-6" />
+                                        </button>
+
+                                        {isShareMenuOpen && (
+                                            <div className="absolute top-full right-0 mt-2 w-48 bg-gray-900/80 backdrop-blur-md border border-white/20 rounded-xl shadow-lg p-2 z-20">
+                                                <a href={facebookShareUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-sm text-gray-200 hover:bg-white/10 rounded-lg">
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v2.385z" /></svg>
+                                                    Facebook
+                                                </a>
+                                                <a href={whatsappShareUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-sm text-gray-200 hover:bg-white/10 rounded-lg">
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21 5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zM12.04 20.1c-1.53 0-3.01-.4-4.29-1.15l-.3-.18-3.18.83.85-3.1-.2-.32c-.82-1.33-1.26-2.83-1.26-4.38 0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.28.86 5.82 2.41s2.41 3.63 2.41 5.82c0 4.55-3.7 8.24-8.23 8.24zm4.52-6.13c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.15.17-.29.19-.54.06-.25-.12-1.07-.39-2.04-1.26-.75-.67-1.26-1.5-1.41-1.76-.15-.25-.02-.38.1-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.55-.42-.15 0-.31 0-.47 0-.17 0-.43.06-.66.31-.22.25-.86.84-.86 2.05 0 1.21.88 2.37 1 2.54.12.17 1.76 2.68 4.27 3.78 2.51 1.09 2.51.73 2.96.7.45-.04 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.07-.1-.23-.16-.48-.28z" /></svg>
+                                                    WhatsApp
+                                                </a>
+                                                <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-sm text-gray-200 hover:bg-white/10 rounded-lg">
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.069-1.645-.069-4.85s.011-3.584.069-4.85c.149-3.225 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.85-.069zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.791-4 4-4 4 1.79 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44 1.441-.645 1.441-1.44-.645-1.44-1.441-1.44z" /></svg>
+                                                    Instagram
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* ===== FIN DE LA CORRECCIÓN ===== */}
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-4">
+                                {selectedColor?.images.map((img, index) => (
+                                    <button key={index} onClick={() => setCurrentImage(img)} className={`w-16 h-16 rounded-lg border-2 transition-all duration-200 ${currentImage === img ? 'border-[#60caba]' : 'border-transparent hover:border-white/50'}`}>
+                                        <img src={img} alt={`Vista ${index + 1}`} className="w-full h-full object-cover rounded-md" />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -296,7 +338,6 @@ const ProductDetailPage: React.FC = () => {
                         </div>
                         
                         <div className="bg-white/5 p-6 rounded-2xl border border-gray-800 shadow-lg">
-                            {/* Selector de Color */}
                             <div className="mb-6">
                                 <div className="flex justify-between items-center mb-3">
                                     <h3 className="text-lg font-semibold text-white">Color</h3>
@@ -315,7 +356,6 @@ const ProductDetailPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Selector de Talla */}
                             <div className="mb-6">
                                 <div className="flex justify-between items-center mb-3">
                                     <h3 className="text-lg font-semibold text-white">Seleccionar Talla</h3>
@@ -334,7 +374,6 @@ const ProductDetailPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Cantidad y Botones de Compra */}
                             <div className="flex flex-col md:flex-row gap-4 mt-8">
                                 <div className="flex items-center w-full md:w-40 border border-gray-600 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
                                     <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="px-4 py-3 text-lg disabled:opacity-30 hover:bg-white/10 w-1/3">-</button>

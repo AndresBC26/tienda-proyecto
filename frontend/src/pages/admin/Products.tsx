@@ -148,7 +148,8 @@ const ProductsAdmin: React.FC = () => {
     if (totalStock <= 10) return { label: 'Stock Bajo', status: 'warning' };
     return { label: 'En Stock', status: 'success' };
   };
-  const getCategoryIcon = (category?: string) => category?.toLowerCase().includes('ropa') ? '👕' : '📦';
+  
+  const getCategoryIcon = (category?: string) => '👕';
 
   if (error) return <div className="p-6 text-red-400">Error: {error}</div>;
 
@@ -193,6 +194,7 @@ const ProductsAdmin: React.FC = () => {
             const totalStock = getTotalStock(product);
             const firstImage = product.variants?.[0]?.images?.[0] || '/placeholder-image.jpg';
             const badgeClasses = { error: 'bg-red-500/20 text-red-300', warning: 'bg-amber-500/20 text-amber-300', success: 'bg-teal-500/20 text-teal-300' };
+            const formattedCategory = product.category.replace(/camiseta(s)?/i, '').trim();
             return (
               <div 
                 key={product._id} 
@@ -203,7 +205,12 @@ const ProductsAdmin: React.FC = () => {
                 <div>
                   <div className="relative h-48"><img src={firstImage} alt={product.name} className="w-full h-full object-cover rounded-lg" /></div>
                   <div className="flex flex-wrap items-center gap-2 mt-4">
-                    <span className="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5">{getCategoryIcon(product.category)}{product.category}</span>
+                    {/* ===== INICIO DE LA CORRECCIÓN ===== */}
+                    <span className="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 capitalize">
+                      <span className="transform -translate-y-px">{getCategoryIcon(product.category)}</span>
+                      {formattedCategory}
+                    </span>
+                    {/* ===== FIN DE LA CORRECCIÓN ===== */}
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeClasses[stockInfo.status as keyof typeof badgeClasses]}`}>{stockInfo.label}</span>
                   </div>
                   <h3 className="font-bold text-gray-100 text-lg truncate mt-3">{product.name}</h3>
@@ -213,7 +220,6 @@ const ProductsAdmin: React.FC = () => {
                   </div>
                   <p className="text-sm text-gray-500 mt-1 h-10 overflow-hidden">{product.description}</p>
                 </div>
-                {/* --- ✅ CAMBIO 1: Se restauran los dos botones en la vista de tarjetas --- */}
                 <div className="flex space-x-2 pt-4 border-t border-white/10 mt-4">
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleEdit(product); }} 
@@ -252,6 +258,7 @@ const ProductsAdmin: React.FC = () => {
                   const totalStock = getTotalStock(product);
                   const firstImage = product.variants?.[0]?.images?.[0] || '/placeholder-image.jpg';
                   const badgeClasses = { error: 'bg-red-500/20 text-red-300', warning: 'bg-amber-500/20 text-amber-300', success: 'bg-teal-500/20 text-teal-300' };
+                  const formattedCategory = product.category.replace(/camiseta(s)?/i, '').trim();
                   return (
                     <tr 
                         key={product._id} 
@@ -264,7 +271,7 @@ const ProductsAdmin: React.FC = () => {
                           <div className="font-medium text-gray-100">{product.name}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-gray-300">{product.category}</td>
+                      <td className="px-4 py-4 text-gray-300 capitalize">{formattedCategory}</td>
                       <td 
                         className="px-4 py-4 font-bold text-[#60caba]"
                         onDoubleClick={(e) => handleDoubleClick(e, product._id, 'price', product.price)}
@@ -286,7 +293,6 @@ const ProductsAdmin: React.FC = () => {
                       </td>
                       <td className="px-4 py-4 text-gray-300">{totalStock}</td>
                       <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeClasses[stockInfo.status as keyof typeof badgeClasses]}`}>{stockInfo.label}</span></td>
-                      {/* --- ✅ CAMBIO 2: Se restaura el botón de editar en la tabla --- */}
                       <td className="px-4 py-4 text-center space-x-2">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleEdit(product); }} 

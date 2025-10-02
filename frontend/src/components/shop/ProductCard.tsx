@@ -1,7 +1,7 @@
 // src/components/shop/Product-card.tsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Product, Size, Variant } from '../../hooks/useProducts'; // Asegúrate de importar Size y Variant
+import { Product, Size, Variant } from '../../hooks/useProducts';
 import { useCart } from '../../contexts/CartContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,7 +19,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isFavorite = favoritesState.items.some(item => item._id === product._id);
   const [pulse, setPulse] = useState(false);
 
-  // --- ✅ [CORRECCIÓN] Lógica de stock adaptada para variantes ---
+  const formattedCategory = product.category.replace(/camiseta(s)?/i, '').trim();
+
   const totalStock = product.variants.reduce((sum, variant) => 
     sum + variant.sizes.reduce((s, size) => s + size.stock, 0), 0);
   
@@ -36,7 +37,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.stopPropagation();
     if (isLimitReached || isOutOfStock) return;
 
-    // --- ✅ [CORRECCIÓN] Lógica para encontrar la primera variante y talla disponible ---
     let firstAvailable: { variant: Variant; size: Size } | null = null;
 
     for (const variant of product.variants) {
@@ -102,7 +102,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const discountPercentage = (brandConfig.business.discountPercentage || 0.10) * 100;
   const originalPrice = product.price / (1 - (brandConfig.business.discountPercentage || 0.10));
 
-  // --- ✅ [CORRECCIÓN] Usa la primera imagen de la primera variante ---
   const displayImage = product.variants?.[0]?.images?.[0] || 'https://via.placeholder.com/400';
 
   return (
@@ -111,11 +110,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       className="group block bg-[#151515]/80 backdrop-blur-sm border border-white/10 rounded-3xl shadow-2xl shadow-black/30 hover:shadow-black/40 transition-all duration-300 overflow-hidden transform hover:-translate-y-1.5 flex flex-col h-full max-w-sm mx-auto"
       >
       <div className="relative overflow-hidden">
+        {/* ===== INICIO DE LA CORRECCIÓN ===== */}
         <img
           src={displayImage}
           alt={product.name}
-          className="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-110 origin-top"
         />
+        {/* ===== FIN DE LA CORRECCIÓN ===== */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
         <button
@@ -131,11 +132,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="p-4 flex flex-col justify-between flex-1">
         <div>
           <div className="flex justify-between items-center mb-2">
-            <span className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-xs font-medium">
-              {product.category}
+            <span className="bg-white/10 text-gray-300 px-3 py-1 rounded-full text-xs font-medium truncate capitalize">
+              {formattedCategory}
             </span>
             <span
-              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                 isOutOfStock
                   ? 'bg-red-500/20 text-red-300'
                   : totalStock <= 10

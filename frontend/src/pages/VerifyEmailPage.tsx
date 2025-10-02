@@ -1,20 +1,27 @@
 // src/pages/VerifyEmailPage.tsx
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../components/layout/Layout';
 import Loading from '../components/common/Loading';
+import { useAuth } from '../contexts/AuthContext'; 
 
 const VerifyEmailPage: React.FC = () => {
-  // 1. Obtenemos el 'token' de la URL (ej: /#/verify-email/A1B2C3D4...)
   const { token } = useParams<{ token: string }>();
 
-  // 2. Estados para manejar el proceso: loading, success, o error.
+  // ===================== LÍNEA AÑADIDA PARA DEPURAR =====================
+  console.log("Token extraído de la URL por useParams:", token);
+  // ====================================================================
+
+  const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Estamos verificando tu cuenta...');
+  
+  const { authenticateUser } = useAuth(); 
 
   useEffect(() => {
-    // 3. Esta función se ejecuta automáticamente en cuanto la página carga.
+    let timer: NodeJS.Timeout;
+    
     const verifyToken = async () => {
       if (!token) {
         setStatus('error');
@@ -23,51 +30,59 @@ const VerifyEmailPage: React.FC = () => {
       }
 
       try {
-        // 4. Se hace la llamada al backend para que verifique el token en la base de datos.
         const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        
         const response = await axios.get(`${apiUrl}/api/users/verify-email/${token}`);
         
-        // 5. Si el backend responde con éxito (código 200)...
+        const { token: jwtToken, user: userData } = response.data;
+
+        if (jwtToken && userData) {
+            authenticateUser(jwtToken, userData); 
+        }
+        
         setStatus('success');
-        // Se muestra el mensaje de éxito que envía el backend.
-        setMessage(response.data.message || '¡Tu correo ha sido verificado con éxito!');
+        setMessage('¡Tu cuenta ha sido verificada e iniciada sesión con éxito!');
+
+        timer = setTimeout(() => {
+          navigate('/'); 
+        }, 3000);
+
       } catch (err: any) {
-        // 6. Si el backend responde con un error...
         setStatus('error');
-        // Se muestra el mensaje de error que envía el backend.
-        setMessage(err.response?.data?.message || 'Ocurrió un error al verificar tu correo. El enlace puede haber expirado.');
+        setMessage(err.response?.data?.message || 'Ocurrió un error. Por favor, intenta iniciar sesión.');
+        
+        timer = setTimeout(() => {
+          navigate('/login'); 
+        }, 3000);
       }
     };
 
     verifyToken();
-  }, [token]); // Se ejecuta cada vez que el token de la URL cambie.
+    
+    return () => {
+        clearTimeout(timer);
+    };
 
-  // 7. Esta función decide qué mostrar en la pantalla según el estado.
+  }, [token, navigate, authenticateUser]);
+
   const renderContent = () => {
     switch (status) {
       case 'loading':
         return <Loading message={message} size="lg" />;
       
       case 'success':
-        // Muestra el mensaje de éxito y un botón claro para ir a iniciar sesión.
         return (
           <>
             <div className="w-24 h-24 mx-auto bg-green-500/20 rounded-3xl flex items-center justify-center mb-6 border border-green-500/30">
               <span className="text-4xl">✅</span>
             </div>
             <h1 className="text-3xl font-bold text-white mb-4">¡Cuenta Verificada!</h1>
-            <p className="text-gray-300 mb-8">{message}</p>
-            <Link
-              to="/login"
-              className="bg-gradient-to-r from-[#60caba] to-[#FFD700] text-black font-bold py-3 px-6 rounded-2xl transition-all duration-200 hover:from-[#58b7a9] hover:to-[#E6C600]"
-            >
-              Iniciar Sesión Ahora
-            </Link>
+            <p className="text-gray-300 mb-2">{message}</p>
+            <p className="text-gray-400">Serás redirigido al Home en 3 segundos...</p>
           </>
         );
 
       case 'error':
-        // Muestra un mensaje de error claro y una opción para volver a intentarlo.
         return (
           <>
             <div className="w-24 h-24 mx-auto bg-red-500/20 rounded-3xl flex items-center justify-center mb-6 border border-red-500/30">

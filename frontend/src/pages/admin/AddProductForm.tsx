@@ -22,7 +22,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     name: '',
     description: '',
     price: 0,
-    category: 'Camisetas Oversize', // ✅ CAMBIO: Valor por defecto actualizado
+    category: 'Camisetas Oversize',
     variants: [],
   });
 
@@ -44,7 +44,6 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
         }))
       });
     } else {
-      // ✅ CAMBIO: Valor por defecto actualizado también al resetear
       setFormData({ name: '', description: '', price: 0, category: 'Camisetas Oversize', variants: [] });
     }
   }, [editingProduct]);
@@ -97,46 +96,21 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     setFormData(prev => ({ ...prev, variants: newVariants }));
   };
   
-  // ========================================================================
-  // =====         ✅ INICIO DE LA CORRECCIÓN DE DRAG & DROP            =====
-  // ========================================================================
-
   const handleSortImages = (variantIndex: number) => {
-    // Asegurarse de que las referencias de drag and drop no sean nulas.
     if (dragImage.current === null || dragOverImage.current === null) return;
     
-    // 1. Crear una copia superficial del array de variantes para no mutar el estado directamente.
     const newVariants = [...formData.variants];
-    
-    // 2. Obtener una referencia a la variante específica que estamos modificando.
     const variantToUpdate = newVariants[variantIndex];
-    
-    // 3. Crear una copia del array de imágenes de esa variante.
     const reorderedImages = [...variantToUpdate.images];
-    
-    // 4. Realizar la operación de reordenamiento:
-    // a) Quita la imagen arrastrada de su posición original y la guarda.
     const draggedImageContent = reorderedImages.splice(dragImage.current, 1)[0];
-    // b) Inserta la imagen guardada en la nueva posición.
     reorderedImages.splice(dragOverImage.current, 0, draggedImageContent);
+    newVariants[variantIndex] = { ...variantToUpdate, images: reorderedImages };
     
-    // 5. Actualiza la variante en la copia del array de variantes con su nuevo array de imágenes.
-    newVariants[variantIndex] = {
-      ...variantToUpdate,
-      images: reorderedImages,
-    };
-    
-    // 6. Limpiar las referencias de useRef después de la operación.
     dragImage.current = null;
     dragOverImage.current = null;
     
-    // 7. Actualizar el estado del formulario con el nuevo array de variantes.
     setFormData(prev => ({ ...prev, variants: newVariants }));
   };
-
-  // ========================================================================
-  // =====          FIN DE LA CORRECCIÓN DE DRAG & DROP                 =====
-  // ========================================================================
 
   // --- ENVÍO DEL FORMULARIO ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,12 +183,14 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Categoría</label>
+              {/* ===== INICIO DE LA CORRECCIÓN ===== */}
               <select name="category" value={formData.category} onChange={handleChange} required 
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-100">
-                <option className="bg-[#151515]" value="Camisetas Oversize">Camisetas Oversize</option>
-                <option className="bg-[#151515]" value="Camisetas Basicas">Camisetas Basicas</option>
-                <option className="bg-[#151515]" value="Camisetas Estampadas">Camisetas Estampadas</option>
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-100 capitalize">
+                <option className="bg-[#151515]" value="Camisetas Oversize">Oversize</option>
+                <option className="bg-[#151515]" value="Camisetas Basicas">Basicas</option>
+                <option className="bg-[#151515]" value="Camisetas Estampadas">Estampadas</option>
               </select>
+              {/* ===== FIN DE LA CORRECCIÓN ===== */}
             </div>
           </div>
         </div>

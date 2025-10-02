@@ -10,12 +10,10 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  // 1. La lógica de visibilidad ahora vive en el Layout
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      // Si el usuario ha bajado más de 10px, marcamos como "scrolled"
       setIsScrolled(window.scrollY > 10);
     };
 
@@ -28,18 +26,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="overflow-hidden">
-      {/* 2. Este contenedor ahora se mueve basado en el estado 'isScrolled' */}
+      {/* Contenedor del Header que se mueve al hacer scroll */}
       <div
         className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${
-          isScrolled ? '-translate-y-8' : 'translate-y-0' // Mueve el bloque 32px hacia arriba
+          isScrolled ? '-translate-y-8' : 'translate-y-0'
         }`}
       >
         <TopBanner />
         <Header />
       </div>
 
-      {/* El padding-top sigue siendo el mismo para asegurar que el contenido nunca se oculte */}
-      <main className="flex-1 relative overflow-hidden pt-48 lg:pt-24">
+      {/* ===== ✅ CORRECCIÓN APLICADA AQUÍ ===== */}
+      {/* Se ajustó el padding-top en móviles para eliminar el espacio */}
+      <main className="flex-1 relative overflow-hidden pt-[170px] lg:pt-24">
         <div className="absolute inset-0 opacity-30">
           <div
             className="absolute inset-0"

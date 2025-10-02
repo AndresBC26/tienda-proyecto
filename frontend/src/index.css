@@ -1,7 +1,10 @@
+/* src/index.css */
+
 /* Importar capas base de TailwindCSS */
 @tailwind base; /* Estilos de reset y base */
 @tailwind components; /* Componentes reutilizables */
 @tailwind utilities; /* Clases utilitarias */
+
 /* Utilidades para truncar texto */
 .line-clamp-1 {
   overflow: hidden;
@@ -24,3 +27,18 @@
   -webkit-line-clamp: 3;
 }
 
+/* ======================================================================== */
+/* =====       ✅ INICIO DE LA MODIFICACIÓN: ANIMACIÓN MÁS RÁPIDA      ===== */
+/* ======================================================================== */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  /* Se cambió la duración de 10s a 7s para que sea más rápido */
+  animation: marquee 7s linear infinite;
+}
+/* ======================================================================== */
+/* =====        ✅ FIN DE LA MODIFICACIÓN: ANIMACIÓN MÁS RÁPIDA         ===== */
+/* ======================================================================== */
