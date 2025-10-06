@@ -12,7 +12,9 @@ const client = new OAuth2Client('714367295627-vpeoa81drg97voneiii9drddnnk523ge.a
 // Middleware de autenticación (sin cambios)
 const auth = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) { return res.status(401).json({ message: 'No hay token, autorización denegada' }); }
+  if (!token) { 
+    return res.status(401).json({ message: 'No hay token, autorización denegada' }); 
+  }
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
     req.user = decoded;
@@ -23,16 +25,35 @@ const auth = (req, res, next) => {
 };
 
 // =================================================================
+// --- ✨ MEJORA: RUTA PARA OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
+// --- Esta es la ruta que soluciona tu error en el panel de admin ---
+// =================================================================
+router.get('/', auth, async (req, res) => {
+  // 1. Verificamos que el usuario que hace la petición sea 'admin'
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
+  }
+
+  try {
+    // 2. Si es admin, busca y devuelve todos los usuarios excluyendo la contraseña
+    const users = await User.find({}).select('-password');
+    res.json(users);
+  } catch (err) {
+    console.error("Error al obtener usuarios:", err);
+    res.status(500).json({ message: 'Error del servidor al obtener usuarios.' });
+  }
+});
+
+
+// =================================================================
 // --- ✅ RUTA PARA VERIFICAR SESIÓN (SOLUCIONA EL REFRESCAR PÁGINA) ---
 // =================================================================
 router.get('/me', auth, async (req, res) => {
   try {
-    // El middleware 'auth' ya verificó el token y puso los datos en req.user
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado.' });
     }
-    // Si todo está bien, enviamos los datos del usuario al frontend
     res.json(user);
   } catch (err) {
     console.error("Error en la ruta /me:", err);
@@ -60,7 +81,6 @@ router.post('/register', async (req, res) => {
     });
     
     await newUser.save();
-    console.log(`Usuario ${email} registrado. Token de verificación guardado en la DB.`);
     
     const verificationUrl = `${process.env.FRONTEND_URL}/#/verify-email/${verificationToken}`;
     
@@ -85,8 +105,7 @@ router.post('/register', async (req, res) => {
 // --- RUTA DE VERIFICACIÓN DE EMAIL ---
 router.get('/verify-email/:token', async (req, res) => {
   try {
-    const receivedToken = req.params.token;
-    const user = await User.findOne({ verificationToken: receivedToken });
+    const user = await User.findOne({ verificationToken: req.params.token });
     
     if (!user) {
       return res.status(400).json({ message: 'El enlace de verificación es inválido o ha expirado.' });
@@ -263,7 +282,7 @@ router.put('/:id', auth, async (req, res) => {
     }
     if (email && email !== user.email) {
       const existingUser = await User.findOne({ email });
-      if (existingUser) {
+      if (existingUser && existingUser._id.toString() !== userIdToUpdate) {
         return res.status(400).json({ message: 'El correo electrónico ya está en uso.' });
       }
       user.email = email;
@@ -288,12 +307,12 @@ router.put('/:id', auth, async (req, res) => {
 // --- ELIMINAR USUARIO ---
 router.delete('/:id', auth, async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
+    }
     const userToDelete = await User.findById(req.params.id);
     if (!userToDelete) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
     }
     if (userToDelete._id.toString() === req.user.id) {
         return res.status(400).json({ message: 'No puedes eliminar tu propia cuenta de administrador.' });
@@ -318,11 +337,7 @@ router.get('/:userId/favorites', auth, async (req, res) => {
 });
 router.post('/:userId/favorites', auth, async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId);
-        if (!user.favorites.includes(req.body.productId)) {
-            user.favorites.push(req.body.productId);
-            await user.save();
-        }
+        await User.findByIdAndUpdate(req.params.userId, { $addToSet: { favorites: req.body.productId } });
         res.status(200).json({ message: 'Producto añadido a favoritos' });
     } catch (err) {
         res.status(500).json({ message: err.message });
