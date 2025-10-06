@@ -10,7 +10,7 @@ const client = new MercadoPagoConfig({
 
 // ===== CONSTANTES DE NEGOCIO (PARA COHERENCIA) =====
 const FREE_SHIPPING_THRESHOLD = 100000;
-const SHIPPING_COST = 12000;
+const SHIPPING_COST = 0;
 // =================================================
 
 router.post('/create-preference', async (req, res) => {
