@@ -15,8 +15,26 @@ const PORT = process.env.PORT || 5000;
 // Antes tenías: app.use(cors());
 // Ahora especificamos que SOLO el frontend puede hacer peticiones.
 // Esto es más seguro y evita problemas en el futuro.
+// Lista de orígenes permitidos
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://eleganciaurban.shop',
+  'http://eleganciaurban.shop',
+  'https://www.eleganciaurban.shop'
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000'
+  origin: function (origin, callback) {
+    // Permitir peticiones sin origin (como apps móviles o Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      return callback(new Error('CORS no permitido'), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
 }));
 // ===============================================================
 
