@@ -48,7 +48,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     }
   }, [editingProduct]);
 
-  // --- MANEJADORES BÁSICOS ---
+  // --- MANEJADORES BÁSICOS (sin cambios) ---
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: name === 'price' ? parseFloat(value) || 0 : value }));
@@ -78,7 +78,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     setFormData(prev => ({ ...prev, variants: newVariants }));
   };
 
-  // --- MANEJADORES DE IMÁGENES ---
+  // --- MANEJADORES DE IMÁGENES (sin cambios) ---
   const handleImageFilesChange = (variantIndex: number, files: FileList) => {
     const newImageFiles = Array.from(files).map(file => ({
       type: 'file' as 'file',
@@ -123,6 +123,14 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     data.append('price', formData.price.toString());
     data.append('category', formData.category);
 
+    // ========================================================================
+    // =====           ✅ INICIO DE LA CORRECCIÓN DEFINITIVA ✅           =====
+    // ========================================================================
+    // El error 500 se producía aquí. Al usar `{ ...variant }`, se podían colar
+    // datos complejos (como el objeto File) en el JSON, lo que rompía el backend.
+    //
+    // La solución es construir un objeto limpio manualmente, asegurando que solo
+    // enviamos los datos que el backend espera (strings, números, etc.).
     const variantsForBackend = formData.variants.map(variant => {
       const imagePlaceholdersOrUrls = variant.images.map(img => {
         if (img.type === 'file') {
@@ -131,8 +139,21 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
         }
         return img.value;
       });
-      return { ...variant, images: imagePlaceholdersOrUrls };
+
+      // Se crea un objeto "limpio" solo con las propiedades necesarias.
+      // También se limpian las tallas para quitar el `_id` que añade Mongoose.
+      const cleanSizes = variant.sizes.map(({ size, stock }) => ({ size, stock }));
+
+      return {
+        colorName: variant.colorName,
+        colorHex: variant.colorHex,
+        sizes: cleanSizes,
+        images: imagePlaceholdersOrUrls,
+      };
     });
+    // ========================================================================
+    // =====            ✅ FIN DE LA CORRECCIÓN DEFINITIVA ✅            =====
+    // ========================================================================
 
     data.append('variants', JSON.stringify(variantsForBackend));
 
@@ -140,7 +161,8 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     const token = localStorage.getItem('token');
     
     try {
-      const headers = { 'Content-Type': 'multipart/form-data', 'Authorization': `Bearer ${token}` };
+      const headers = { 'Authorization': `Bearer ${token}` };
+
       if (editingProduct) {
         await axios.put(`${API_URL}/api/products/${editingProduct._id}`, data, { headers });
         notify('Producto actualizado exitosamente!', 'success');
@@ -183,14 +205,12 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Categoría</label>
-              {/* ===== INICIO DE LA CORRECCIÓN ===== */}
               <select name="category" value={formData.category} onChange={handleChange} required 
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-100 capitalize">
                 <option className="bg-[#151515]" value="Camisetas Oversize">Oversize</option>
                 <option className="bg-[#151515]" value="Camisetas Basicas">Basicas</option>
                 <option className="bg-[#151515]" value="Camisetas Estampadas">Estampadas</option>
               </select>
-              {/* ===== FIN DE LA CORRECCIÓN ===== */}
             </div>
           </div>
         </div>

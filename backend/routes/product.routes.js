@@ -19,31 +19,28 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ✅ POST (CORREGIDO Y MEJORADO)
+// POST (con las mejoras de robustez)
 router.post('/', upload.array('imageFiles'), async (req, res) => {
   try {
     const { name, description, price, category, variants } = req.body;
     
+    if (!variants) {
+        return res.status(400).json({ message: 'Faltan los datos de las variantes.' });
+    }
     const initialVariants = JSON.parse(variants);
     let fileIndex = 0;
 
     const finalVariants = initialVariants.map(variant => {
       const newImages = variant.images
         .map(imgPlaceholder => {
-          // 1. Asegurarse de que el placeholder es el correcto y que el archivo existe
           if (imgPlaceholder === 'placeholder' && req.files && req.files[fileIndex]) {
             const imageUrl = req.files[fileIndex].path;
             fileIndex++;
             return imageUrl;
           }
-          // 2. Si es una URL existente (no debería pasar en POST, pero es buena práctica), mantenerla
-          if (typeof imgPlaceholder === 'string' && imgPlaceholder.startsWith('http')) {
-              return imgPlaceholder;
-          }
-          // 3. Ignorar cualquier placeholder que no tenga un archivo correspondiente
           return null; 
         })
-        .filter(img => img !== null); // 4. Limpiar el array de nulos para no guardar basura
+        .filter(img => img !== null);
 
       return { ...variant, images: newImages };
     });
@@ -52,38 +49,49 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
     const savedProduct = await newProduct.save();
     res.status(201).json(savedProduct);
   } catch (err) {
-    console.error("Error al crear producto con Cloudinary:", err);
+    console.error("Error al crear producto:", err);
     res.status(400).json({ message: err.message });
   }
 });
 
-// ✅ PUT (CORREGIDO Y MEJORADO)
+// ========================================================================
+// =====      ✅ RUTA PUT CON LA CORRECCIÓN DEFINITIVA PARA LOCALHOST ✅   =====
+// ========================================================================
 router.put('/:id', upload.array('imageFiles'), async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
-        
+
+        if (!variants) {
+            return res.status(400).json({ message: 'Faltan los datos de las variantes (variants).' });
+        }
+
         const initialVariants = JSON.parse(variants);
         let fileIndex = 0;
 
         const finalVariants = initialVariants.map(variant => {
             const newImages = variant.images.map(img => {
-                // 1. Si es un placeholder para un archivo nuevo y el archivo existe
+                // Caso 1: Es un placeholder para un archivo nuevo, lo reemplazamos con la URL de Cloudinary.
                 if (img === 'new_file_placeholder' && req.files && req.files[fileIndex]) {
                     const newUrl = req.files[fileIndex].path;
                     fileIndex++;
                     return newUrl;
                 }
-                // 2. Si es una URL existente, la mantenemos
-                if (typeof img === 'string' && img.startsWith('http')) {
+                
+                // Caso 2: Es una URL de Cloudinary válida que ya existía, la conservamos.
+                if (typeof img === 'string' && img.startsWith('https://res.cloudinary.com')) {
                     return img;
                 }
-                // 3. Ignoramos cualquier placeholder inválido o sin archivo
+                
+                // ❗️ LA CLAVE ESTÁ AQUÍ ❗️
+                // Caso 3: Es cualquier otra cosa (una URL de localhost, un placeholder corrupto, etc.),
+                // la ignoramos por completo devolviendo null.
                 return null;
-            }).filter(img => img !== null); // 4. Limpiamos nulos para no guardar basura
+
+            }).filter(img => img !== null); // Finalmente, limpiamos el array de todos los nulos.
 
             return { ...variant, images: newImages };
         });
-
+        
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
             { name, description, price, category, variants: finalVariants },
@@ -93,11 +101,15 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
         if (!updatedProduct) {
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
-
+        
         res.json(updatedProduct);
+
     } catch (err) {
-        console.error("Error al actualizar producto con Cloudinary:", err);
-        res.status(400).json({ message: err.message });
+        console.error('Error fatal al actualizar el producto:', err);
+        res.status(500).json({ 
+            message: 'Error interno del servidor al actualizar.',
+            error: err.message 
+        });
     }
 });
 
