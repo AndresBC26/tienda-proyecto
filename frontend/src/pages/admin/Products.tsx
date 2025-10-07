@@ -154,7 +154,8 @@ const ProductsAdmin: React.FC = () => {
   if (error) return <div className="p-6 text-red-400">Error: {error}</div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    // ✅ CORRECCIÓN: Se eliminó `p-6 max-w-7xl mx-auto` de esta línea.
+    <div>
       <div className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 p-6 mb-6 rounded-2xl shadow-lg border border-white/10 backdrop-blur-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -205,12 +206,10 @@ const ProductsAdmin: React.FC = () => {
                 <div>
                   <div className="relative h-48"><img src={firstImage} alt={product.name} className="w-full h-full object-cover rounded-lg" /></div>
                   <div className="flex flex-wrap items-center gap-2 mt-4">
-                    {/* ===== INICIO DE LA CORRECCIÓN ===== */}
                     <span className="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 capitalize">
                       <span className="transform -translate-y-px">{getCategoryIcon(product.category)}</span>
                       {formattedCategory}
                     </span>
-                    {/* ===== FIN DE LA CORRECCIÓN ===== */}
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeClasses[stockInfo.status as keyof typeof badgeClasses]}`}>{stockInfo.label}</span>
                   </div>
                   <h3 className="font-bold text-gray-100 text-lg truncate mt-3">{product.name}</h3>

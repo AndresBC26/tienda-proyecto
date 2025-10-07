@@ -1,8 +1,8 @@
 // src/pages/admin/Users.tsx
 import React, { useEffect, useState } from "react";
 import Modal from "../../components/common/Modal";
-import { useNotification } from "../../contexts/NotificationContext"; // Importa el hook de notificación
-import toast, { Toast } from 'react-hot-toast'; // Importa toast y el TIPO Toast
+import { useNotification } from "../../contexts/NotificationContext";
+import toast, { Toast } from 'react-hot-toast';
 
 interface User {
   _id: string;
@@ -10,15 +10,12 @@ interface User {
   email: string;
   role: string;
   gender?: string;
-  documentType?: string;
-  documentNumber?: string;
-  birthDate?: string;
 }
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const UsersAdmin: React.FC = () => {
-  const { notify } = useNotification(); // Inicializa el hook
+  const { notify } = useNotification();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +128,7 @@ const UsersAdmin: React.FC = () => {
   };
 
   const deleteUser = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Evita que se abra el modal de edición
+    e.stopPropagation();
     notify(
       (t: Toast) => (
         <div className="text-white p-2">
@@ -167,7 +164,7 @@ const UsersAdmin: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center p-6">
+      <div className="flex items-center justify-center">
         <div className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md backdrop-blur-sm">
           <h2 className="text-lg font-semibold text-red-200">Error al cargar</h2>
           <p className="text-red-300 mb-6">{error}</p>
@@ -178,7 +175,8 @@ const UsersAdmin: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    // ✅ CORRECCIÓN DEFINITIVA: Se ha eliminado `p-6` y `max-w-7xl mx-auto` de esta línea.
+    <div>
       <div className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 p-6 mb-6 rounded-2xl shadow-lg border border-white/10 backdrop-blur-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -215,7 +213,6 @@ const UsersAdmin: React.FC = () => {
             >
               <div className="flex items-center space-x-3"><div className="bg-gradient-to-br from-[#60caba]/80 to-[#FFD700]/80 rounded-full w-12 h-12 flex items-center justify-center text-lg">{getGenderIcon(user.gender)}</div><div><h3 className="font-bold text-gray-100 text-lg">{user.name}</h3><span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.role === 'admin' ? 'bg-red-500/20 text-red-300' : 'bg-teal-500/20 text-teal-300'}`}>{user.role}</span></div></div>
               <p className="text-sm text-gray-400">{user.email}</p>
-              {/* --- ✅ CAMBIO 1: Se mantienen los botones en la tarjeta --- */}
               <div className="flex space-x-2 pt-4 border-t border-white/10">
                 <button 
                   onClick={(e) => { e.stopPropagation(); openEditModal(user); }} 
@@ -262,7 +259,6 @@ const UsersAdmin: React.FC = () => {
                       </td>
                       <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${user.role === 'admin' ? 'bg-red-500/20 text-red-300' : 'bg-teal-500/20 text-teal-300'}`}>{user.role}</span></td>
                       <td className="px-4 py-4 text-center space-x-2">
-                          {/* --- ✅ CAMBIO 2: Se mantienen los botones en la tabla --- */}
                           <button 
                             onClick={(e) => { e.stopPropagation(); openEditModal(user); }} 
                             className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors"

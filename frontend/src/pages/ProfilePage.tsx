@@ -90,7 +90,8 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12 text-white">
+    // ✅ CORRECCIÓN: Se eliminó la clase `min-h-[calc(...)]` de aquí
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12 text-white">
       <div className="container mx-auto px-6">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent mb-2">

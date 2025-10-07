@@ -30,7 +30,8 @@ const CartPage: React.FC = () => {
 
   if (cartState.items.length === 0) {
     return (
-        <div className="min-h-[calc(100vh-500px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 text-white">
+        // ✅ CORRECCIÓN: Se eliminó la clase `min-h-[calc(...)]` de aquí
+        <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 text-white">
           <div className="container mx-auto px-6">
             <div className="max-w-md mx-auto text-center">
               <div className="relative mb-8">
@@ -67,7 +68,8 @@ const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-500px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12">
+    // ✅ CORRECCIÓN: Se eliminó la clase `min-h-[calc(...)]` de aquí
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12">
       <div className="container mx-auto px-6">
         <div className="mb-12">
           <nav className="mb-6">
@@ -145,7 +147,6 @@ const CartPage: React.FC = () => {
                                 ✓ Disponible
                               </span>
                             </div>
-                            {/* ===== INICIO DEL CAMBIO IMPORTANTE ===== */}
                             <div className="flex items-baseline space-x-2 mb-4">
                               <span className="text-2xl font-bold text-gray-100">
                                 ${item.price.toLocaleString()}
@@ -155,7 +156,6 @@ const CartPage: React.FC = () => {
                               </span>
                               <span className="text-sm font-medium text-red-400">-{itemDiscountPercentage}%</span>
                             </div>
-                            {/* ===== FIN DEL CAMBIO IMPORTANTE ===== */}
                           </div>
                           <div className="flex flex-col items-end space-y-4">
                             <div className="flex items-center space-x-3 bg-black/30 rounded-xl p-1">

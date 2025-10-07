@@ -9,7 +9,7 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ className = '' }) => {
   return (
-    <footer className={`bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] border-t border-white/10 ${className}`}>
+    <footer className={`bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] ${className}`}>
       <div className="container mx-auto px-6 py-12">
         {/* CONTENIDO PRINCIPAL DEL FOOTER */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">

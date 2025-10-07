@@ -25,8 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="overflow-hidden">
-      {/* Contenedor del Header que se mueve al hacer scroll */}
+    <div className="min-h-screen flex flex-col overflow-hidden">
       <div
         className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${
           isScrolled ? '-translate-y-8' : 'translate-y-0'
@@ -36,8 +35,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <Header />
       </div>
 
-      {/* ===== ✅ CORRECCIÓN APLICADA AQUÍ ===== */}
-      {/* Se ajustó el padding-top en móviles para eliminar el espacio */}
       <main className="flex-1 relative overflow-hidden pt-[170px] lg:pt-24">
         <div className="absolute inset-0 opacity-30">
           <div

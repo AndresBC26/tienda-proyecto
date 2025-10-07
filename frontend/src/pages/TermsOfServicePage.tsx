@@ -3,7 +3,8 @@ import React from 'react';
 
 const TermsOfServicePage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-100">
+    // ✅ CORRECCIÓN: Se ha eliminado `min-h-screen` de esta línea.
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-100">
       <section className="py-20">
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">

@@ -11,10 +11,6 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ======================= CAMBIO CLAVE AQUÍ =======================
-// Antes tenías: app.use(cors());
-// Ahora especificamos que SOLO el frontend puede hacer peticiones.
-// Esto es más seguro y evita problemas en el futuro.
 // Lista de orígenes permitidos
 const allowedOrigins = [
   'http://localhost:3000',
@@ -26,24 +22,21 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir peticiones sin origin (como apps móviles o Postman)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('CORS no permitido'), false);
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS no permitido'), false);
     }
-    return callback(null, true);
   },
   credentials: true
 }));
-// ===============================================================
 
 app.use(express.json());
 
 // Sirve la carpeta 'public' como recurso estático
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// 📌 Montar rutas y registrar que se han montado
+// 📌 Montar rutas
 const productRoutes = require('./routes/product.routes');
 app.use('/api/products', productRoutes);
 console.log('Ruta de productos montada en /api/products');
@@ -63,6 +56,12 @@ console.log('Ruta de contacto montada en /api/contact');
 const paymentRoutes = require('./routes/payment.routes');
 app.use('/api/payment', paymentRoutes);
 console.log('Ruta de pagos montada en /api/payment');
+
+// ===== ✅ RUTA DEL DASHBOARD AÑADIDA AQUÍ =====
+const dashboardRoutes = require('./routes/dashboard.routes');
+app.use('/api/dashboard', dashboardRoutes);
+console.log('Ruta de dashboard montada en /api/dashboard');
+// =============================================
 
 app.get('/', (req, res) => {
   res.json({ message: '🛍️ Backend funcionando con MongoDB Atlas!' });

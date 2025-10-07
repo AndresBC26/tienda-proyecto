@@ -63,7 +63,8 @@ const ProductsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20">
+      // ✅ CORRECCIÓN: Se ha eliminado `min-h-screen` de esta línea.
+      <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20">
         <div className="container mx-auto px-6">
           <div className="text-center">
             <Loading message="Cargando productos increíbles..." size="lg" />
@@ -76,7 +77,8 @@ const ProductsPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20">
+      // ✅ CORRECCIÓN: Se ha eliminado `min-h-screen` de esta línea.
+      <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20">
         <div className="container mx-auto px-6">
           <div className="max-w-md mx-auto text-center">
             <div className="w-24 h-24 mx-auto bg-red-500/20 rounded-3xl flex items-center justify-center mb-6">
@@ -100,7 +102,8 @@ const ProductsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
+    // ✅ CORRECCIÓN: Se ha eliminado `min-h-screen` de esta línea.
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
     
       {/* CONTENIDO PRINCIPAL */}
       <section className="py-12">

@@ -265,7 +265,8 @@ const ProductDetailPage: React.FC = () => {
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-300 pt-20">
+        // ✅ CORRECCIÓN DEFINITIVA: Se ha eliminado `min-h-screen` de esta línea.
+        <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-300 pt-20">
             <div className="container mx-auto px-4 sm:px-6 py-8">
                 <div className="grid lg:grid-cols-2 gap-12">
                     
@@ -278,7 +279,6 @@ const ProductDetailPage: React.FC = () => {
                                     alt={`${product.name} - ${selectedColor?.colorName}`} 
                                     className="w-full h-full object-cover rounded-2xl transition-all duration-300 shadow-xl group-hover:scale-105"
                                 />
-                                {/* ===== INICIO DE LA CORRECCIÓN ===== */}
                                 <div ref={shareMenuRef} className="absolute top-4 right-4 flex flex-col items-center gap-2">
                                     <button onClick={toggleWishlist} className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-110 ${isWishlisted ? 'bg-red-500/30 text-red-400' : 'bg-black/40 text-gray-300'}`} type="button" title="Añadir a favoritos">
                                         <svg className="w-6 h-6" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
@@ -307,7 +307,6 @@ const ProductDetailPage: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                {/* ===== FIN DE LA CORRECCIÓN ===== */}
                             </div>
                             <div className="flex flex-wrap gap-2 mt-4">
                                 {selectedColor?.images.map((img, index) => (
@@ -319,7 +318,6 @@ const ProductDetailPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* COLUMNA 2: DETALLES DEL PRODUCTO */}
                     <div className="flex flex-col space-y-8">
                         <div>
                             <nav className="flex text-xs text-gray-500 mb-4 space-x-2">

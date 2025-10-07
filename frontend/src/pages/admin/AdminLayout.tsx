@@ -14,17 +14,14 @@ const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const { logout, loading: authLoading } = useAuth();
   
-  // Estados para controlar si se muestra el punto de notificación
   const [hasNewUsers, setHasNewUsers] = useState(false);
   const [hasNewReviews, setHasNewReviews] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   
-  // Estados para almacenar el conteo actual de items
   const [userCount, setUserCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
-  // Hook que se ejecuta una vez para verificar si hay contenido nuevo
   useEffect(() => {
     const checkNotifications = async () => {
       try {
@@ -32,10 +29,8 @@ const AdminLayout: React.FC = () => {
         if (!token) return;
 
         const headers = { Authorization: `Bearer ${token}` };
-        // ✅ SOLUCIÓN APLICADA AQUÍ
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-        // Peticiones para obtener los datos
         const [usersRes, reviewsRes, messagesRes] = await Promise.all([
           axios.get(`${API_URL}/api/users`, { headers }),
           axios.get(`${API_URL}/api/reviews`, { headers }),
@@ -46,12 +41,10 @@ const AdminLayout: React.FC = () => {
         const currentReviews = reviewsRes.data.length;
         const currentMessages = messagesRes.data.length;
 
-        // Actualizar los contadores en el estado del componente
         setUserCount(currentUsers);
         setReviewCount(currentReviews);
         setMessageCount(currentMessages);
 
-        // Comparar con los valores guardados en localStorage
         const seenUsersCount = parseInt(localStorage.getItem('seenUsersCount') || '0');
         const seenReviewsCount = parseInt(localStorage.getItem('seenReviewsCount') || '0');
         const seenMessagesCount = parseInt(localStorage.getItem('seenMessagesCount') || '0');
@@ -73,7 +66,6 @@ const AdminLayout: React.FC = () => {
     navigate('/login');
   };
   
-  // Funciones que se ejecutan al hacer clic en los enlaces del menú
   const handleSeeUsers = () => {
     setHasNewUsers(false);
     localStorage.setItem('seenUsersCount', userCount.toString());
@@ -97,6 +89,7 @@ const AdminLayout: React.FC = () => {
   const logoutClass = `block px-4 py-2 rounded-xl transition duration-200 mt-auto hover:bg-red-500/20 text-gray-300 hover:text-red-300`;
 
   return (
+    // ✅ CORRECCIÓN 1: Se asegura que el contenedor principal ocupe toda la pantalla y sea flexible.
     <div className="min-h-screen flex bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
       <aside className="w-64 bg-black/30 text-white p-6 space-y-4 flex flex-col border-r border-white/10">
         <h1 className="text-2xl font-bold mb-6 bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
@@ -134,13 +127,17 @@ const AdminLayout: React.FC = () => {
           </div>
         </button>
       </aside>
-      <main className="flex-1 p-6 text-white">
+      
+      {/* ✅ CORRECCIÓN 2: Se hace que el área de contenido principal se expanda. */}
+      <main className="flex flex-1 flex-col overflow-y-auto">
         {authLoading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex flex-1 items-center justify-center h-full">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#60caba]"></div>
           </div>
         ) : (
-          <Outlet />
+          <div className="flex-1 p-6 text-white">
+            <Outlet />
+          </div>
         )}
       </main>
     </div>

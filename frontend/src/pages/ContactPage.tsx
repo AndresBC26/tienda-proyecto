@@ -4,18 +4,17 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { brandConfig } from '../utils/brandConfig';
-import { useNotification } from '../contexts/NotificationContext'; // <-- IMPORTADO
+import { useNotification } from '../contexts/NotificationContext';
 
 const ContactPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
-  const { notify } = useNotification(); // <-- HOOK EN USO
+  const { notify } = useNotification();
   const [formData, setFormData] = useState({
     subject: '',
     message: '',
   });
   const [loading, setLoading] = useState(false);
 
-  // Pre-rellena los campos si el usuario está logueado
   const userName = isAuthenticated ? user?.name : 'Invitado';
   const userEmail = isAuthenticated ? user?.email : 'inicia-sesion@para.enviar';
 
@@ -27,29 +26,29 @@ const ContactPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      notify('Debes iniciar sesión para enviar un mensaje.', 'error'); // <-- CAMBIADO
+      notify('Debes iniciar sesión para enviar un mensaje.', 'error');
       return;
     }
     setLoading(true);
 
     try {
       const token = localStorage.getItem('token');
-      // ✅ SOLUCIÓN APLICADA AQUÍ
       await axios.post(`${process.env.REACT_APP_API_URL}/api/contact`, formData, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      notify('¡Mensaje enviado exitosamente! Te responderemos pronto.', 'success'); // <-- CAMBIADO
+      notify('¡Mensaje enviado exitosamente! Te responderemos pronto.', 'success');
       setFormData({ subject: '', message: '' });
     } catch (err) {
-      notify('Hubo un error al enviar el mensaje. Inténtalo de nuevo.', 'error'); // <-- CAMBIADO
+      notify('Hubo un error al enviar el mensaje. Inténtalo de nuevo.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[calc(100vh-500px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-100">
+    // ✅ CORRECCIÓN: Se eliminó la clase `min-h-[calc(...)]` de aquí
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-100">
       {/* HERO */}
       <section className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 relative overflow-hidden">
         {/* Elementos decorativos */}
@@ -122,7 +121,6 @@ const ContactPage: React.FC = () => {
             </form>
           </div>
 
-          {/* ===== SECCIÓN DE INFORMACIÓN Y REDES SOCIALES (CON ICONOS SVG MEJORADOS) ===== */}
           <div className="space-y-8">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8">
               <h3 className="text-2xl font-bold text-white mb-6 flex items-center space-x-3">
@@ -196,7 +194,7 @@ const ContactPage: React.FC = () => {
                   rel="noopener noreferrer" 
                   className="bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] hover:opacity-90 text-white p-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:brightness-110 flex flex-col items-center justify-center space-y-1 font-semibold"
                 >
-                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.069-1.645-.069-4.85s.011-3.584.069-4.85c.149-3.225 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.85-.069zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.791-4 4-4 4 1.79 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44 1.441-.645 1.441-1.44-.645-1.44-1.441-1.44z" /></svg>
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.069-1.645-.069-4.85s.011-3.584.069-4.85c.149-3.225 1.664 4.771 4.919-4.919 1.266-.057 1.645-.069 4.85-.069zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.791-4 4-4 4 1.79 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44 1.441-.645 1.441-1.44-.645-1.44-1.441-1.44z" /></svg>
                   <span className="text-sm">Instagram</span>
                 </a>
 

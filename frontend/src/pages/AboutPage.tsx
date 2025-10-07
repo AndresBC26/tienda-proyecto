@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 
 const AboutPage: React.FC = () => {
   return (
-    <div className="min-h-[calc(100vh-500px)] bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-100">
+    // ✅ CORRECCIÓN DEFINITIVA: Se ha eliminado `min-h-[calc(100vh-500px)]` de esta línea.
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-100">
       {/* HERO DE ABOUT */}
       <section className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 relative overflow-hidden">
         {/* Elementos decorativos */}

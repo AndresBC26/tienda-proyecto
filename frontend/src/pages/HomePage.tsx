@@ -163,7 +163,8 @@ const FeaturedProductsCarousel: React.FC = () => {
 
 const Homepage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
+    // ✅ CORRECCIÓN DEFINITIVA: Se ha eliminado `min-h-screen` de esta línea.
+    <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
       {/* Sección Hero */}
       <section className="pt-32 pb-20 px-4 relative overflow-hidden">
         {/* Elementos decorativos */}
@@ -257,9 +258,7 @@ const Homepage: React.FC = () => {
         </div>
       </section>
 
-{/* Vista Previa de Categorías - VERSIÓN MEJORADA */}
 <section className="py-20 px-4 bg-gradient-to-r from-white/5 via-transparent to-white/5 relative overflow-hidden">
-  {/* Elementos decorativos de fondo */}
   <div className="absolute top-10 left-20 w-32 h-32 bg-[#60caba]/20 rounded-full blur-2xl animate-pulse"></div>
   <div className="absolute bottom-20 right-10 w-48 h-48 bg-[#FFD700]/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-2 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
@@ -335,33 +334,27 @@ const Homepage: React.FC = () => {
               animationDelay: `${index * 200}ms`
             }}
           >
-            {/* Patrón de fondo animado */}
             <div 
               className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity duration-500"
               style={{ background: category.bgPattern }}
             ></div>
 
-            {/* Efecto de brillo en hover */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-            {/* Gradiente de hover */}
             <div
               className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-20 transition-all duration-500`}
             ></div>
 
-            {/* Contenido superior */}
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-6">
                 <div className={`relative w-16 h-16 bg-gradient-to-r ${category.hoverGradient} rounded-2xl flex items-center justify-center 
                                 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg overflow-hidden`}>
-                  {/* Imagen de la camiseta */}
                   <img 
                     src={category.image} 
                     alt={`${category.name} style`}
                     className="w-full h-full object-cover rounded-2xl group-hover:scale-110 transition-transform duration-500"
                     loading="lazy"
                   />
-                  {/* Overlay con gradiente */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-30 group-hover:opacity-50 transition-opacity duration-300`}></div>
                 </div>
                 <div className="text-2xl group-hover:animate-bounce">
@@ -382,9 +375,7 @@ const Homepage: React.FC = () => {
               </div>
             </div>
 
-            {/* Contenido inferior */}
             <div className="relative z-10 flex items-center justify-between">
-              {/* Badge y precio */}
               <div className="flex flex-col space-y-2">
                 <div className={`px-3 py-1 bg-gradient-to-r ${category.badgeColor} rounded-full`}>
                   <span className="text-xs font-bold text-white tracking-wide">{category.badge}</span>
@@ -397,20 +388,17 @@ const Homepage: React.FC = () => {
                 </div>
               </div>
               
-              {/* Botón de acción mejorado */}
               <div className="flex items-center text-gray-400 group-hover:text-white transition-colors duration-300">
                 <span className="text-sm font-semibold mr-3">Ver Todo</span>
                 <div className="relative w-8 h-8 rounded-full border-2 border-current flex items-center justify-center 
                                group-hover:scale-110 group-hover:border-[#FFD700] group-hover:bg-[#FFD700]/10 
                                transition-all duration-300 overflow-hidden">
-                  {/* Efecto de onda en hover */}
                   <div className="absolute inset-0 bg-gradient-to-r from-[#60caba] to-[#FFD700] opacity-0 group-hover:opacity-20 rounded-full"></div>
                   <span className="text-sm transform group-hover:translate-x-1 transition-transform duration-300 relative z-10">→</span>
                 </div>
               </div>
             </div>
 
-            {/* Efecto de partículas en hover */}
             <div className="absolute top-4 right-4 w-2 h-2 bg-[#FFD700] rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping"></div>
             <div className="absolute bottom-8 left-6 w-1 h-1 bg-[#60caba] rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping delay-100"></div>
             <div className="absolute top-1/2 right-8 w-1.5 h-1.5 bg-[#ec4899] rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping delay-200"></div>
@@ -419,7 +407,6 @@ const Homepage: React.FC = () => {
       })}
     </div>
 
-    {/* Sección inferior mejorada */}
     <div className="mt-16 text-center">
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-4xl mx-auto">
         <div className="flex items-center justify-center mb-4">
