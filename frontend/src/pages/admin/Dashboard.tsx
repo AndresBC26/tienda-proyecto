@@ -1,6 +1,6 @@
 // src/pages/admin/Dashboard.tsx
 import React from 'react';
-import { useDashboardStats } from '../../hooks/useDashboardStats'; // Importamos el nuevo hook
+import { useDashboardStats } from '../../hooks/useDashboardStats';
 import {
   LineChart,
   Line,
@@ -25,11 +25,31 @@ const formatCurrency = (value: number) => {
 // Nombres de los meses para las gráficas
 const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
+
+// ========================================================================
+// =====      ✅ INICIO DE LA MEJORA: COMPONENTE DE TOOLTIP CUSTOM      =====
+// ========================================================================
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-black/70 backdrop-blur-sm border border-white/20 p-3 rounded-xl shadow-lg">
+        <p className="label text-sm font-bold text-white">{`${label}`}</p>
+        <p className="intro text-xs" style={{ color: payload[0].fill }}>
+          {`Nuevos Usuarios : ${payload[0].value}`}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+// ========================================================================
+// =====       FIN DE LA MEJORA: COMPONENTE DE TOOLTIP CUSTOM         =====
+// ========================================================================
+
+
 const Dashboard: React.FC = () => {
-  // Usamos nuestro hook para obtener los datos
   const { stats, loading, error } = useDashboardStats();
 
-  // 1. Estado de carga
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full pt-20">
@@ -39,7 +59,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // 2. Estado de error
   if (error) {
     return (
       <div className="bg-red-500/20 p-6 rounded-2xl text-red-200 text-center border border-red-500/30">
@@ -49,7 +68,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // 3. Transformación de datos para las gráficas
   const salesChartData = stats?.salesByMonth.map(item => ({
     month: monthNames[item._id.month - 1],
     ventas: item.totalVentas || 0,
@@ -66,7 +84,6 @@ const Dashboard: React.FC = () => {
         📊 Panel de Control
       </h1>
 
-      {/* Tarjetas con datos reales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl shadow-lg">
           <h2 className="text-sm text-gray-400">Ventas Totales</h2>
@@ -88,7 +105,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Gráfica de ventas con datos reales */}
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl shadow-lg">
         <h2 className="text-xl font-semibold mb-4 text-white">Ventas por Mes</h2>
         <div className="h-64">
@@ -107,24 +123,45 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Gráfica de usuarios con datos reales */}
+      {/* ======================================================================== */}
+      {/* =====        ✅ INICIO DE LA MEJORA: GRÁFICA DE USUARIOS           ===== */}
+      {/* ======================================================================== */}
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl shadow-lg">
         <h2 className="text-xl font-semibold mb-4 text-white">Usuarios Nuevos por Mes</h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={usersChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <Bar dataKey="nuevos" fill="#FFD700" />
+              
+              {/* 1. Definición del gradiente */}
+              <defs>
+                <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#FFD700" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#60caba" stopOpacity={0.8}/>
+                </linearGradient>
+              </defs>
+
               <CartesianGrid stroke="rgba(255, 255, 255, 0.1)" strokeDasharray="5 5" />
               <XAxis dataKey="month" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" allowDecimals={false} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px' }}
-                formatter={(value: number) => [value, 'Nuevos Usuarios']}
+
+              {/* 2. Tooltip personalizado y cursor de hover */}
+              <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255, 255, 255, 0.08)'}} />
+
+              {/* 3. Barra con gradiente, bordes redondeados y efecto de hover */}
+              <Bar 
+                dataKey="nuevos" 
+                fill="url(#colorUsers)" 
+                radius={[10, 10, 0, 0]} 
+                activeBar={{ fill: 'rgba(255, 215, 0, 0.5)' }} 
               />
+
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
+      {/* ======================================================================== */}
+      {/* =====         FIN DE LA MEJORA: GRÁFICA DE USUARIOS              ===== */}
+      {/* ======================================================================== */}
     </div>
   );
 };

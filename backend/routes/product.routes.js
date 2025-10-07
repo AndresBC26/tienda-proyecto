@@ -3,18 +3,10 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const multer = require('multer');
-const path = require('path');
+const { storage } = require('../config/cloudinary'); // ✅ 1. Importamos la nueva configuración
 
-// Configuración de Multer (sin cambios)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'public/images/products');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage: storage });
+// Usamos el 'storage' de Cloudinary en lugar del local
+const upload = multer({ storage });
 
 // --- ENDPOINTS DE LA API ---
 
@@ -28,11 +20,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ========================================================================
-// =====            ✅ INICIO DE LA CORRECCIÓN DEFINITIVA             =====
-// ========================================================================
-
-// Endpoint para AGREGAR un producto (POST) - CORREGIDO
+// ✅ 2. Endpoint para AGREGAR un producto (POST) - CORREGIDO PARA CLOUDINARY
 router.post('/', upload.array('imageFiles'), async (req, res) => {
   try {
     const { name, description, price, category, variants } = req.body;
@@ -40,21 +28,16 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
     const initialVariants = JSON.parse(variants);
     let fileIndex = 0;
 
-    // CLAVE DE LA SOLUCIÓN: Usamos .map() para crear un nuevo array de variantes
-    // en lugar de modificar el original con .forEach(). Esto evita errores de sincronización.
     const finalVariants = initialVariants.map(variant => {
       const newImages = variant.images.map(imgPlaceholder => {
-        // Si el 'placeholder' corresponde a un nuevo archivo y aún hay archivos en la cola...
         if ((imgPlaceholder === 'placeholder' || imgPlaceholder === 'new_file_placeholder') && req.files[fileIndex]) {
-          // Se construye la URL y se avanza el contador de forma segura.
-          const imageUrl = `${req.protocol}://${req.get('host')}/public/images/products/${req.files[fileIndex].filename}`;
+          // req.files[fileIndex].path ahora contiene la URL segura de Cloudinary
+          const imageUrl = req.files[fileIndex].path;
           fileIndex++;
           return imageUrl;
         }
-        // Si no, se mantiene la URL existente (importante para editar).
         return imgPlaceholder;
       });
-      // Devolvemos la variante actualizada con su array de imágenes correcto.
       return { ...variant, images: newImages };
     });
 
@@ -62,12 +45,12 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
     const savedProduct = await newProduct.save();
     res.status(201).json(savedProduct);
   } catch (err) {
-    console.error("Error al crear producto:", err);
+    console.error("Error al crear producto con Cloudinary:", err);
     res.status(400).json({ message: err.message });
   }
 });
 
-// Endpoint para EDITAR un producto (PUT) - CORREGIDO con la misma lógica robusta
+// ✅ 3. Endpoint para EDITAR un producto (PUT) - CORREGIDO PARA CLOUDINARY
 router.put('/:id', upload.array('imageFiles'), async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
@@ -75,15 +58,15 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
         const initialVariants = JSON.parse(variants);
         let fileIndex = 0;
 
-        // Se aplica la misma lógica segura de .map() para la edición.
         const finalVariants = initialVariants.map(variant => {
             const newImages = variant.images.map(img => {
                 if (img === 'new_file_placeholder' && req.files[fileIndex]) {
-                    const newUrl = `${req.protocol}://${req.get('host')}/public/images/products/${req.files[fileIndex].filename}`;
+                    // La URL de la nueva imagen viene directamente de Cloudinary
+                    const newUrl = req.files[fileIndex].path;
                     fileIndex++;
                     return newUrl;
                 }
-                return img; // Mantiene las URLs existentes que no se cambiaron.
+                return img; // Mantiene las URLs existentes
             });
             return { ...variant, images: newImages };
         });
@@ -100,14 +83,10 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
 
         res.json(updatedProduct);
     } catch (err) {
-        console.error("Error al actualizar producto:", err);
+        console.error("Error al actualizar producto con Cloudinary:", err);
         res.status(400).json({ message: err.message });
     }
 });
-
-// ========================================================================
-// =====             FIN DE LA CORRECCIÓN DEFINITIVA                  =====
-// ========================================================================
 
 // Endpoint para ELIMINAR un producto (DELETE) - Sin cambios
 router.delete('/:id', async (req, res) => {
