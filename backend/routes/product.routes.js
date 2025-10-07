@@ -9,11 +9,23 @@ const upload = multer({ storage });
 
 // --- ENDPOINTS DE LA API ---
 
-// GET (Sin cambios)
+// GET y DELETE no necesitan cambios
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find({});
     res.json(products);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+    if (!deletedProduct) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    res.json({ message: 'Producto eliminado correctamente' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -78,7 +90,7 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
                 }
                 
                 // Caso 2: Es una URL de Cloudinary válida que ya existía, la conservamos.
-                if (typeof img === 'string' && img.startsWith('https://res.cloudinary.com')) {
+                if (typeof img === 'string' && (img.startsWith('https://res.cloudinary.com') || img.startsWith('http://res.cloudinary.com'))) {
                     return img;
                 }
                 
@@ -113,18 +125,5 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
     }
 });
 
-
-// DELETE (Sin cambios)
-router.delete('/:id', async (req, res) => {
-  try {
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-    if (!deletedProduct) {
-      return res.status(404).json({ message: 'Producto no encontrado' });
-    }
-    res.json({ message: 'Producto eliminado correctamente' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
 
 module.exports = router;
