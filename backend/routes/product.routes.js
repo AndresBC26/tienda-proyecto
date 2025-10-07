@@ -3,14 +3,13 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const multer = require('multer');
-const { storage } = require('../config/cloudinary'); // ✅ 1. Importamos la nueva configuración
+const { storage } = require('../config/cloudinary');
 
-// Usamos el 'storage' de Cloudinary en lugar del local
 const upload = multer({ storage });
 
 // --- ENDPOINTS DE LA API ---
 
-// Endpoint para obtener TODOS los productos (GET) - Sin cambios
+// GET (Sin cambios)
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find({});
@@ -20,7 +19,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ✅ 2. Endpoint para AGREGAR un producto (POST) - CORREGIDO PARA CLOUDINARY
+// ✅ POST (CORREGIDO Y MEJORADO)
 router.post('/', upload.array('imageFiles'), async (req, res) => {
   try {
     const { name, description, price, category, variants } = req.body;
@@ -29,15 +28,23 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
     let fileIndex = 0;
 
     const finalVariants = initialVariants.map(variant => {
-      const newImages = variant.images.map(imgPlaceholder => {
-        if ((imgPlaceholder === 'placeholder' || imgPlaceholder === 'new_file_placeholder') && req.files[fileIndex]) {
-          // req.files[fileIndex].path ahora contiene la URL segura de Cloudinary
-          const imageUrl = req.files[fileIndex].path;
-          fileIndex++;
-          return imageUrl;
-        }
-        return imgPlaceholder;
-      });
+      const newImages = variant.images
+        .map(imgPlaceholder => {
+          // 1. Asegurarse de que el placeholder es el correcto y que el archivo existe
+          if (imgPlaceholder === 'placeholder' && req.files && req.files[fileIndex]) {
+            const imageUrl = req.files[fileIndex].path;
+            fileIndex++;
+            return imageUrl;
+          }
+          // 2. Si es una URL existente (no debería pasar en POST, pero es buena práctica), mantenerla
+          if (typeof imgPlaceholder === 'string' && imgPlaceholder.startsWith('http')) {
+              return imgPlaceholder;
+          }
+          // 3. Ignorar cualquier placeholder que no tenga un archivo correspondiente
+          return null; 
+        })
+        .filter(img => img !== null); // 4. Limpiar el array de nulos para no guardar basura
+
       return { ...variant, images: newImages };
     });
 
@@ -50,7 +57,7 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
   }
 });
 
-// ✅ 3. Endpoint para EDITAR un producto (PUT) - CORREGIDO PARA CLOUDINARY
+// ✅ PUT (CORREGIDO Y MEJORADO)
 router.put('/:id', upload.array('imageFiles'), async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
@@ -60,14 +67,20 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
 
         const finalVariants = initialVariants.map(variant => {
             const newImages = variant.images.map(img => {
-                if (img === 'new_file_placeholder' && req.files[fileIndex]) {
-                    // La URL de la nueva imagen viene directamente de Cloudinary
+                // 1. Si es un placeholder para un archivo nuevo y el archivo existe
+                if (img === 'new_file_placeholder' && req.files && req.files[fileIndex]) {
                     const newUrl = req.files[fileIndex].path;
                     fileIndex++;
                     return newUrl;
                 }
-                return img; // Mantiene las URLs existentes
-            });
+                // 2. Si es una URL existente, la mantenemos
+                if (typeof img === 'string' && img.startsWith('http')) {
+                    return img;
+                }
+                // 3. Ignoramos cualquier placeholder inválido o sin archivo
+                return null;
+            }).filter(img => img !== null); // 4. Limpiamos nulos para no guardar basura
+
             return { ...variant, images: newImages };
         });
 
@@ -88,7 +101,8 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
     }
 });
 
-// Endpoint para ELIMINAR un producto (DELETE) - Sin cambios
+
+// DELETE (Sin cambios)
 router.delete('/:id', async (req, res) => {
   try {
     const deletedProduct = await Product.findByIdAndDelete(req.params.id);
