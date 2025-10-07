@@ -7,9 +7,7 @@ const { storage } = require('../config/cloudinary');
 
 const upload = multer({ storage });
 
-// --- ENDPOINTS DE LA API ---
-
-// GET y DELETE no necesitan cambios
+// GET y DELETE no necesitan cambios...
 router.get('/', async (req, res) => {
   try {
     const products = await Product.find({});
@@ -66,60 +64,74 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
   }
 });
 
+
 // ========================================================================
-// =====      ✅ RUTA PUT CON LA CORRECCIÓN DEFINITIVA PARA LOCALHOST ✅   =====
+// =====      ✅ RUTA PUT CON DIAGNÓSTICO DETALLADO AÑADIDO ✅        =====
 // ========================================================================
 router.put('/:id', upload.array('imageFiles'), async (req, res) => {
+    console.log('\n--- INICIANDO PETICIÓN PUT /api/products/:id ---');
     try {
+        // 1. Ver qué datos de texto llegan del formulario
+        console.log('1. req.body recibido:', req.body);
         const { name, description, price, category, variants } = req.body;
 
+        // 2. Ver si los archivos se están subiendo correctamente
+        console.log('2. req.files recibido:', req.files);
+
         if (!variants) {
+            console.error('🔥 ERROR: El campo "variants" no llegó en el body.');
             return res.status(400).json({ message: 'Faltan los datos de las variantes (variants).' });
         }
 
+        // 3. Ver el JSON de variantes antes de parsearlo
+        console.log('3. String JSON de variantes:', variants);
         const initialVariants = JSON.parse(variants);
+        console.log('4. Variantes parseadas (objeto JS):', JSON.stringify(initialVariants, null, 2));
+
         let fileIndex = 0;
 
         const finalVariants = initialVariants.map(variant => {
             const newImages = variant.images.map(img => {
-                // Caso 1: Es un placeholder para un archivo nuevo, lo reemplazamos con la URL de Cloudinary.
                 if (img === 'new_file_placeholder' && req.files && req.files[fileIndex]) {
                     const newUrl = req.files[fileIndex].path;
+                    console.log(`🔄 Reemplazando placeholder con nueva URL: ${newUrl}`);
                     fileIndex++;
                     return newUrl;
                 }
-                
-                // Caso 2: Es una URL de Cloudinary válida que ya existía, la conservamos.
-                if (typeof img === 'string' && (img.startsWith('https://res.cloudinary.com') || img.startsWith('http://res.cloudinary.com'))) {
-                    return img;
-                }
-                
-                // ❗️ LA CLAVE ESTÁ AQUÍ ❗️
-                // Caso 3: Es cualquier otra cosa (una URL de localhost, un placeholder corrupto, etc.),
-                // la ignoramos por completo devolviendo null.
-                return null;
-
-            }).filter(img => img !== null); // Finalmente, limpiamos el array de todos los nulos.
+                return img;
+            }).filter(imgUrl => typeof imgUrl === 'string' && imgUrl.length > 0); // Filtro extra de seguridad
 
             return { ...variant, images: newImages };
         });
         
+        console.log('5. Objeto final de variantes para la BD:', JSON.stringify(finalVariants, null, 2));
+
+        const updateData = { name, description, price, category, variants: finalVariants };
+        console.log('6. Datos completos para enviar a Mongoose:', JSON.stringify(updateData, null, 2));
+
+        // 7. Llamada a la base de datos
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            { name, description, price, category, variants: finalVariants },
-            { new: true, runValidators: true }
+            updateData,
+            { new: true, runValidators: true } // runValidators es clave
         );
 
+        console.log('7. Producto actualizado en la BD con éxito.');
+
         if (!updatedProduct) {
+            console.error('🔥 ERROR: Producto no encontrado con ID:', req.params.id);
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
-        
+
+        console.log('--- PETICIÓN PUT COMPLETADA EXITOSAMENTE ---');
         res.json(updatedProduct);
 
     } catch (err) {
-        console.error('Error fatal al actualizar el producto:', err);
+        // Si algo falla, este bloque nos dirá exactamente qué fue
+        console.error('❌❌❌ ERROR FATAL EN EL BLOQUE TRY-CATCH ❌❌❌');
+        console.error('El error es:', err); // ¡Este es el log más importante!
         res.status(500).json({ 
-            message: 'Error interno del servidor al actualizar.',
+            message: 'Error interno del servidor. Revisa la consola del backend.',
             error: err.message 
         });
     }
