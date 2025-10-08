@@ -2,19 +2,17 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Configura Cloudinary usando las variables de entorno que acabas de agregar
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY, // Esta línea está correcta
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// NO es necesario volver a configurar las credenciales aquí.
+// El archivo server.js ya lo hizo por toda la aplicación.
 
-// Configura el almacenamiento para que Multer suba los archivos a Cloudinary
+// Simplemente crea el objeto de almacenamiento para que Multer lo use.
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'elegancia_urban_products', // El nombre de la carpeta está bien
-    allowed_formats: ['jpeg', 'png', 'jpg', 'webp'], // Formatos permitidos
+    folder: 'elegancia_urban_products', // El nombre de tu carpeta en Cloudinary
+    allowed_formats: ['jpeg', 'png', 'jpg', 'webp'],
+    // Opcional: optimiza y estandariza el tamaño de las imágenes subidas
+    transformation: [{ width: 1024, height: 1024, crop: 'limit' }]
   },
 });
 
