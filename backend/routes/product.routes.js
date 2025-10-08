@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
 const multer = require('multer');
-const { storage } = require('../config/cloudinary');
+const { storage } = require('../config/cloudinary'); // Asumo que este archivo está bien configurado
 
 const upload = multer({ storage });
 
@@ -40,17 +40,19 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
     const initialVariants = JSON.parse(variants);
     let fileIndex = 0;
 
+    // ✅ CORRECCIÓN AQUÍ: Asegúrate de que req.files existe antes de mapear
     const finalVariants = initialVariants.map(variant => {
       const newImages = variant.images
         .map(imgPlaceholder => {
+          // Si el placeholder es para un archivo nuevo y hay archivos subidos
           if (imgPlaceholder === 'placeholder' && req.files && req.files[fileIndex]) {
-            const imageUrl = req.files[fileIndex].path;
+            const imageUrl = req.files[fileIndex].path; // Esta es la URL de Cloudinary
             fileIndex++;
             return imageUrl;
           }
-          return null; 
+          return null; // Ignora placeholders si no hay más archivos
         })
-        .filter(img => img !== null);
+        .filter(img => img !== null); // Limpia los nulos
 
       return { ...variant, images: newImages };
     });
@@ -71,35 +73,29 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
 router.put('/:id', upload.array('imageFiles'), async (req, res) => {
     console.log('\n--- INICIANDO PETICIÓN PUT /api/products/:id ---');
     try {
-        // 1. Ver qué datos de texto llegan del formulario
-        console.log('1. req.body recibido:', req.body);
         const { name, description, price, category, variants } = req.body;
-
-        // 2. Ver si los archivos se están subiendo correctamente
+        console.log('1. req.body recibido:', req.body);
         console.log('2. req.files recibido:', req.files);
 
         if (!variants) {
-            console.error('🔥 ERROR: El campo "variants" no llegó en el body.');
             return res.status(400).json({ message: 'Faltan los datos de las variantes (variants).' });
         }
 
-        // 3. Ver el JSON de variantes antes de parsearlo
-        console.log('3. String JSON de variantes:', variants);
         const initialVariants = JSON.parse(variants);
-        console.log('4. Variantes parseadas (objeto JS):', JSON.stringify(initialVariants, null, 2));
-
         let fileIndex = 0;
 
         const finalVariants = initialVariants.map(variant => {
             const newImages = variant.images.map(img => {
+                // ✅ CORRECCIÓN AQUÍ: Reemplaza el placeholder con la URL de Cloudinary
                 if (img === 'new_file_placeholder' && req.files && req.files[fileIndex]) {
-                    const newUrl = req.files[fileIndex].path;
+                    const newUrl = req.files[fileIndex].path; // Esta es la URL de Cloudinary
                     console.log(`🔄 Reemplazando placeholder con nueva URL: ${newUrl}`);
                     fileIndex++;
                     return newUrl;
                 }
+                // Mantiene las URLs existentes que no son placeholders
                 return img;
-            }).filter(imgUrl => typeof imgUrl === 'string' && imgUrl.length > 0); // Filtro extra de seguridad
+            }).filter(imgUrl => typeof imgUrl === 'string' && imgUrl.startsWith('http')); // Filtro de seguridad para solo guardar URLs válidas
 
             return { ...variant, images: newImages };
         });
@@ -107,19 +103,14 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
         console.log('5. Objeto final de variantes para la BD:', JSON.stringify(finalVariants, null, 2));
 
         const updateData = { name, description, price, category, variants: finalVariants };
-        console.log('6. Datos completos para enviar a Mongoose:', JSON.stringify(updateData, null, 2));
 
-        // 7. Llamada a la base de datos
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
             updateData,
-            { new: true, runValidators: true } // runValidators es clave
+            { new: true, runValidators: true }
         );
 
-        console.log('7. Producto actualizado en la BD con éxito.');
-
         if (!updatedProduct) {
-            console.error('🔥 ERROR: Producto no encontrado con ID:', req.params.id);
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
 
@@ -127,9 +118,8 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
         res.json(updatedProduct);
 
     } catch (err) {
-        // Si algo falla, este bloque nos dirá exactamente qué fue
         console.error('❌❌❌ ERROR FATAL EN EL BLOQUE TRY-CATCH ❌❌❌');
-        console.error('El error es:', err); // ¡Este es el log más importante!
+        console.error('El error es:', err);
         res.status(500).json({ 
             message: 'Error interno del servidor. Revisa la consola del backend.',
             error: err.message 

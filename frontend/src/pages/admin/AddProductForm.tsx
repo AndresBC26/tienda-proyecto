@@ -48,7 +48,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     }
   }, [editingProduct]);
 
-  // --- MANEJADORES BÁSICOS (sin cambios) ---
+  // --- MANEJADORES BÁSICOS ---
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: name === 'price' ? parseFloat(value) || 0 : value }));
@@ -78,7 +78,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     setFormData(prev => ({ ...prev, variants: newVariants }));
   };
 
-  // --- MANEJADORES DE IMÁGENES (sin cambios) ---
+  // --- MANEJADORES DE IMÁGENES ---
   const handleImageFilesChange = (variantIndex: number, files: FileList) => {
     const newImageFiles = Array.from(files).map(file => ({
       type: 'file' as 'file',
@@ -123,14 +123,6 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     data.append('price', formData.price.toString());
     data.append('category', formData.category);
 
-    // ========================================================================
-    // =====           ✅ INICIO DE LA CORRECCIÓN DEFINITIVA ✅           =====
-    // ========================================================================
-    // El error 500 se producía aquí. Al usar `{ ...variant }`, se podían colar
-    // datos complejos (como el objeto File) en el JSON, lo que rompía el backend.
-    //
-    // La solución es construir un objeto limpio manualmente, asegurando que solo
-    // enviamos los datos que el backend espera (strings, números, etc.).
     const variantsForBackend = formData.variants.map(variant => {
       const imagePlaceholdersOrUrls = variant.images.map(img => {
         if (img.type === 'file') {
@@ -140,8 +132,6 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
         return img.value;
       });
 
-      // Se crea un objeto "limpio" solo con las propiedades necesarias.
-      // También se limpian las tallas para quitar el `_id` que añade Mongoose.
       const cleanSizes = variant.sizes.map(({ size, stock }) => ({ size, stock }));
 
       return {
@@ -151,9 +141,6 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
         images: imagePlaceholdersOrUrls,
       };
     });
-    // ========================================================================
-    // =====            ✅ FIN DE LA CORRECCIÓN DEFINITIVA ✅            =====
-    // ========================================================================
 
     data.append('variants', JSON.stringify(variantsForBackend));
 
