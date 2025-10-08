@@ -49,7 +49,7 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
             fileIndex++;
             return imageUrl;
           }
-          return null;
+          return null; // Este valor se filtrará después
         }).filter(img => img !== null);
 
       return { ...variant, images: newImages };
@@ -59,7 +59,15 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
     const savedProduct = await newProduct.save();
     res.status(201).json(savedProduct);
   } catch (err) {
-    console.error("Error al crear producto:", err);
+    // ====================== MEJORA INTEGRADA ======================
+    // 2. Log de error mejorado para dar más contexto en caso de fallo.
+    console.error("Error detallado al crear producto:", {
+        message: err.message,
+        stack: err.stack,
+        body: req.body,    // Muestra los datos de texto recibidos
+        files: req.files   // Muestra los archivos que procesó multer
+    });
+    // ===============================================================
     res.status(500).json({ message: 'Error interno del servidor al crear el producto: ' + err.message });
   }
 });
@@ -83,6 +91,7 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
                     fileIndex++;
                     return newUrl;
                 }
+                // Conserva las URLs existentes
                 if (typeof img === 'string' && img.startsWith('http')) {
                     return img;
                 }
@@ -106,7 +115,16 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
         res.json(updatedProduct);
 
     } catch (err) {
-        console.error('Error al actualizar producto:', err);
+        // ====================== MEJORA INTEGRADA ======================
+        // 2. Log de error mejorado también para la ruta de actualización.
+        console.error('Error detallado al actualizar producto:', {
+            message: err.message,
+            stack: err.stack,
+            body: req.body,
+            files: req.files,
+            productId: req.params.id
+        });
+        // ===============================================================
         res.status(500).json({ 
             message: 'Error interno del servidor al actualizar.',
             error: err.message 

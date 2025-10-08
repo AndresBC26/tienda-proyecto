@@ -5,6 +5,19 @@ const path = require('path');
 require('dotenv').config();
 const connectDB = require('./config/database');
 
+// ====================== MEJORA INTEGRADA ======================
+// 1. Importar Cloudinary y configurarlo con las variables de entorno.
+// Esto permite que 'multer-storage-cloudinary' se autentique correctamente.
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true // Se recomienda usar https
+});
+// ===============================================================
+
 connectDB();
 
 const app = express();
