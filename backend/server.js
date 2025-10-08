@@ -31,41 +31,39 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+// ✅ MEJORA: Aumentamos el límite de tamaño para los datos.
+// Esto previene errores si los datos del formulario (incluyendo imágenes) son grandes.
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Sirve la carpeta 'public' como recurso estático
+// Sirve la carpeta 'public' (aunque ya no la usemos para productos)
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// 📌 Montar rutas
-const productRoutes = require('./routes/product.routes');
-app.use('/api/products', productRoutes);
-console.log('Ruta de productos montada en /api/products');
-
-const userRoutes = require('./routes/user.routes');
-app.use('/api/users', userRoutes);
-console.log('Ruta de usuarios montada en /api/users');
-
-const reviewRoutes = require('./routes/review.routes');
-app.use('/api/reviews', reviewRoutes);
-console.log('Ruta de reseñas montada en /api/reviews');
-
-const contactRoutes = require('./routes/contact.routes');
-app.use('/api/contact', contactRoutes);
-console.log('Ruta de contacto montada en /api/contact');
-
-const paymentRoutes = require('./routes/payment.routes');
-app.use('/api/payment', paymentRoutes);
-console.log('Ruta de pagos montada en /api/payment');
-
-// ===== ✅ RUTA DEL DASHBOARD AÑADIDA AQUÍ =====
-const dashboardRoutes = require('./routes/dashboard.routes');
-app.use('/api/dashboard', dashboardRoutes);
-console.log('Ruta de dashboard montada en /api/dashboard');
-// =============================================
+// --- 📌 Montar rutas (sin cambios) ---
+app.use('/api/products', require('./routes/product.routes'));
+app.use('/api/users', require('./routes/user.routes'));
+app.use('/api/reviews', require('./routes/review.routes'));
+app.use('/api/contact', require('./routes/contact.routes'));
+app.use('/api/payment', require('./routes/payment.routes'));
+app.use('/api/dashboard', require('./routes/dashboard.routes'));
 
 app.get('/', (req, res) => {
-  res.json({ message: '🛍️ Backend funcionando con MongoDB Atlas!' });
+  res.json({ message: '🛍️ Backend de Elegancia Urban funcionando!' });
 });
+
+// ✅ MEJORA CRUCIAL: Manejador de Errores Global
+// Este middleware se ejecutará si ocurre cualquier error en las rutas anteriores (incluyendo un fallo en Cloudinary).
+// Nos enviará un mensaje de error detallado en lugar de un "500 Internal Server Error" genérico.
+app.use((err, req, res, next) => {
+  console.error('--- ERROR GLOBAL CAPTURADO ---');
+  console.error(err.stack); // Muestra el error completo en los logs de Render
+  res.status(500).json({ 
+    message: 'Algo salió muy mal en el servidor.',
+    // La clave es que ahora enviamos el mensaje de error específico
+    error: err.message 
+  });
+});
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Express corriendo en puerto ${PORT}`);
