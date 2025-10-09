@@ -273,9 +273,17 @@ router.put('/:id', auth, async (req, res) => {
     const { name, email } = req.body;
     const userIdToUpdate = req.params.id;
 
-    if (req.user.id !== userIdToUpdate && req.user.role !== 'admin') {
+    // ====================== INICIO DE LA CORRECCIÓN ======================
+    // 1. Define claramente las condiciones de permiso.
+    const isOwner = req.user.id === userIdToUpdate;
+    const isAdmin = req.user.role === 'admin';
+
+    // 2. Si el usuario no es el dueño del perfil Y TAMPOCO es un admin, denegar acceso.
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'No tienes permiso para actualizar este perfil.' });
     }
+    // ======================= FIN DE LA CORRECCIÓN =======================
+
     const user = await User.findById(userIdToUpdate);
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
