@@ -95,31 +95,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const data = await res.json(); 
 
     if (!res.ok) throw new Error(data.message || 'Credenciales inválidas');
-    
     // Usamos authenticateUser para manejar el guardado del estado
     authenticateUser(data.token, data.user);
     return data.user;
   };
 
-  // --- FUNCIÓN PARA GOOGLE LOGIN (MODIFICADA) ---
+  // --- FUNCIÓN PARA GOOGLE LOGIN (MODIFICADA CON DEBUG) ---
   // 👇 CAMBIO 2: Se añade el parámetro 'intent' a la función
   const loginWithGoogle = async (token: string, intent: 'register' | 'login') => {
     if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada.");
 
-    const res = await fetch(`${API_URL}/api/users/google-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // 👇 CAMBIO 3: Se envía el 'intent' al backend
-      body: JSON.stringify({ token, intent }),
-    });
+    console.log('🔍 LoginWithGoogle Debug:');
+    console.log('API_URL:', API_URL);
+    console.log('Token length:', token?.length);
+    console.log('Intent:', intent);
 
-    const data = await res.json();
+    try {
+      const res = await fetch(`${API_URL}/api/users/google-login`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        // 👇 CAMBIO 3: Se envía el 'intent' al backend
+        body: JSON.stringify({ token, intent }),
+      });
 
-    if (!res.ok) throw new Error(data.message || 'Error en el inicio de sesión con Google');
-    
-    // Usamos authenticateUser para manejar el guardado del estado
-    authenticateUser(data.token, data.user);
-    return data.user;
+      console.log('Response status:', res.status);
+      console.log('Response ok:', res.ok);
+      console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+
+      const data = await res.json();
+      console.log('Response data:', data);
+
+      if (!res.ok) throw new Error(data.message || 'Error en el inicio de sesión con Google');
+      
+      // Usamos authenticateUser para manejar el guardado del estado
+      authenticateUser(data.token, data.user);
+      return data.user;
+    } catch (error) {
+      console.error('❌ Error detallado en loginWithGoogle:', error);
+      
+      // Si es un error de red, proporcionar más información
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Error de conexión: No se puede conectar al servidor. Verifica tu conexión a internet.');
+      }
+      
+      throw error;
+    }
   };
 
   const logout = () => {

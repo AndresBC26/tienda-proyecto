@@ -33,21 +33,28 @@ const RegisterPage: React.FC = () => {
     if (response.credential) {
       setLoading(true);
       setMessage('');
+      
+      console.log('Google callback iniciado');
+      console.log('Credential length:', response.credential?.length);
+      
       try {
-        // ✅ CORRECTION: Pass 'register' as the second argument
+        // CORRECTION: Pass 'register' as the second argument
         await loginWithGoogle(response.credential, 'register');
         navigate('/');
       } catch (err: any) {
-        setMessage('❌ ' + (err.message || 'Error al registrarse con Google.'));
+        console.error('Error en handleGoogleCallback:', err);
+        setMessage(' ' + (err.message || 'Error al registrarse con Google.'));
         setLoading(false);
       }
+    } else {
+      console.error('No se recibió credential de Google');
+      setMessage('No se pudo obtener la información de Google. Intenta de nuevo.');
     }
   };
 
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/');
-      return;
     }
 
     if (window.google?.accounts?.id && googleButtonContainerRef.current) {
