@@ -26,16 +26,13 @@ const auth = (req, res, next) => {
 
 // =================================================================
 // --- ✨ MEJORA: RUTA PARA OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
-// --- Esta es la ruta que soluciona tu error en el panel de admin ---
 // =================================================================
 router.get('/', auth, async (req, res) => {
-  // 1. Verificamos que el usuario que hace la petición sea 'admin'
   if (req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
   }
 
   try {
-    // 2. Si es admin, busca y devuelve todos los usuarios excluyendo la contraseña
     const users = await User.find({}).select('-password');
     res.json(users);
   } catch (err) {
@@ -154,9 +151,17 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// --- RUTA PARA LOGIN CON GOOGLE ---
+
+// ======================= CAMBIO IMPORTANTE AQUÍ =======================
+// --- RUTA PARA LOGIN CON GOOGLE (CON LÓGICA SEPARADA) ---
 router.post('/google-login', async (req, res) => {
-  const { token } = req.body;
+  // 1. Obtenemos el token y la nueva variable 'intent'
+  const { token, intent } = req.body;
+
+  if (!intent) {
+    return res.status(400).json({ message: 'Intento no especificado (login o register).' });
+  }
+
   try {
     const ticket = await client.verifyIdToken({
         idToken: token,
@@ -164,53 +169,56 @@ router.post('/google-login', async (req, res) => {
     });
     const { name, email } = ticket.getPayload();
 
-    let user = await User.findOne({ email });
-    let isNewUser = false;
+    const user = await User.findOne({ email });
 
-    if (!user) {
-      isNewUser = true;
+    // 2. Lógica condicional basada en la intención
+    if (intent === 'register') {
+      // Si la intención es registrarse...
+      if (user) {
+        // ...pero el usuario ya existe, devolvemos un error.
+        return res.status(400).json({ message: 'Este correo ya está registrado. Por favor, inicia sesión.' });
+      }
+      
+      // Si no existe, procedemos a crearlo (el flujo feliz de registro)
       const password = email + process.env.JWT_SECRET;
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
       const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
 
-      user = new User({
+      const newUser = new User({
         name,
         email,
         password: hashedPassword,
         isVerified: true,
-        acceptedTerms: true,
+        acceptedTerms: true, // Asumimos que al usar Google aceptan los términos
         role: userRole
       });
-      await user.save();
+      await newUser.save();
+      
+      const payload = { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role };
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+      return res.json({ token: jwtToken, user: payload });
+
+    } else if (intent === 'login') {
+      // Si la intención es iniciar sesión...
+      if (!user) {
+        // ...pero el usuario NO existe, devolvemos un error.
+        return res.status(404).json({ message: 'Usuario no encontrado. Por favor, regístrate primero.' });
+      }
+
+      // Si el usuario existe, procedemos a iniciar sesión (el flujo feliz de login)
+      const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
+      const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+      return res.json({ token: jwtToken, user: payload });
     }
-
-    if (isNewUser) {
-      const welcomeHtml = `
-        <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 12px; max-width: 600px; margin: auto; background-color: #f9f9f9;">
-          <h1 style="color: #60caba;">¡Hola ${name}, te damos la bienvenida a Elegancia Urban!</h1>
-          <p style="font-size: 16px;">Tu cuenta ha sido creada exitosamente...</p>
-          <a href="${process.env.FRONTEND_URL}/#/products" style="background: linear-gradient(to right, #60caba, #FFD700); color: #000; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; margin: 20px 0;">Explorar la Colección</a>
-        </div>
-      `;
-
-      await sendEmail({
-        to: user.email,
-        subject: '¡Bienvenido a Elegancia Urban!',
-        html: welcomeHtml
-      });
-    }
-
-    const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
-
-    res.json({ token: jwtToken, user: payload });
 
   } catch (error) {
     console.error("Error en google-login:", error);
     res.status(400).json({ message: 'La autenticación con Google falló.' });
   }
 });
+// ====================================================================
+
 
 // --- RECUPERACIÓN DE CONTRASEÑA ---
 router.post('/forgot-password', async (req, res) => {
@@ -273,16 +281,12 @@ router.put('/:id', auth, async (req, res) => {
     const { name, email } = req.body;
     const userIdToUpdate = req.params.id;
 
-    // ====================== INICIO DE LA CORRECCIÓN ======================
-    // 1. Define claramente las condiciones de permiso.
     const isOwner = req.user.id === userIdToUpdate;
     const isAdmin = req.user.role === 'admin';
 
-    // 2. Si el usuario no es el dueño del perfil Y TAMPOCO es un admin, denegar acceso.
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'No tienes permiso para actualizar este perfil.' });
     }
-    // ======================= FIN DE LA CORRECCIÓN =======================
 
     const user = await User.findById(userIdToUpdate);
     if (!user) {
