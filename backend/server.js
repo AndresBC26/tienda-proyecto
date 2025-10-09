@@ -9,6 +9,7 @@ const connectDB = require('./config/database');
 // 1. Importar Cloudinary y configurarlo con las variables de entorno.
 // Esto permite que 'multer-storage-cloudinary' se autentique correctamente.
 const cloudinary = require('cloudinary').v2;
+const { verifyCloudinaryConfig } = require('./config/cloudinary');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,6 +17,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true // Se recomienda usar https
 });
+
+// Verificar configuración de Cloudinary al iniciar
+verifyCloudinaryConfig();
 // ===============================================================
 
 connectDB();

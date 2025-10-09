@@ -4,8 +4,39 @@ const router = express.Router();
 const Product = require('../models/Product');
 const multer = require('multer');
 const { storage } = require('../config/cloudinary');
+const jwt = require('jsonwebtoken');
 
-const upload = multer({ storage }); 
+// Middleware de autenticación
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'No hay token, autorización denegada' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+    req.user = decoded;
+    next();
+  } catch (e) {
+    res.status(403).json({ message: 'Token no válido' });
+  }
+};
+
+// Configuración mejorada de multer con validaciones
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB por archivo
+    files: 20 // máximo 20 archivos
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de imagen'), false);
+    }
+  }
+}); 
 
 // GET y DELETE (sin cambios)
 router.get('/', async (req, res) => {
@@ -29,8 +60,33 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// POST (sin cambios, ya estaba correcto)
-router.post('/', upload.array('imageFiles'), async (req, res) => {
+// Middleware para manejar errores de Multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        message: 'El archivo es demasiado grande. Máximo 10MB por imagen.' 
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ 
+        message: 'Demasiados archivos. Máximo 20 imágenes por producto.' 
+      });
+    }
+    return res.status(400).json({ 
+      message: 'Error en la subida de archivos: ' + err.message 
+    });
+  }
+  if (err.message === 'Solo se permiten archivos de imagen') {
+    return res.status(400).json({ 
+      message: 'Solo se permiten archivos de imagen (JPEG, PNG, JPG, WEBP)' 
+    });
+  }
+  next(err);
+};
+
+// POST - Crear producto (requiere autenticación)
+router.post('/', authenticateToken, upload.array('imageFiles'), handleMulterError, async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
         const numericPrice = parseFloat(price);
@@ -57,15 +113,41 @@ router.post('/', upload.array('imageFiles'), async (req, res) => {
         const savedProduct = await newProduct.save();
         res.status(201).json(savedProduct);
     } catch (err) {
-        console.error("Error al crear producto:", err);
-        res.status(500).json({ message: 'Error interno del servidor al crear el producto: ' + err.message });
+        console.error("Error detallado al crear producto:", {
+            message: err.message,
+            stack: err.stack,
+            body: req.body,
+            files: req.files ? req.files.length : 0,
+            user: req.user ? req.user.id : 'No user'
+        });
+        
+        // Manejo específico de errores de Cloudinary
+        if (err.message && err.message.includes('cloudinary')) {
+            return res.status(500).json({ 
+                message: 'Error al subir imágenes a Cloudinary', 
+                error: err.message 
+            });
+        }
+        
+        // Manejo específico de errores de Multer
+        if (err.message && err.message.includes('imagen')) {
+            return res.status(400).json({ 
+                message: 'Error en el archivo de imagen', 
+                error: err.message 
+            });
+        }
+        
+        res.status(500).json({ 
+            message: 'Error interno del servidor al crear el producto', 
+            error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno del servidor'
+        });
     }
 });
 
 
 // ====================== INICIO DE LA CORRECCIÓN DEFINITIVA ======================
-// PUT /api/products/:id - Actualizar un producto existente (NUEVA LÓGICA)
-router.put('/:id', upload.array('imageFiles'), async (req, res) => {
+// PUT /api/products/:id - Actualizar un producto existente (requiere autenticación)
+router.put('/:id', authenticateToken, upload.array('imageFiles'), handleMulterError, async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
 
@@ -120,12 +202,30 @@ router.put('/:id', upload.array('imageFiles'), async (req, res) => {
             message: err.message,
             stack: err.stack,
             body: req.body,
-            files: req.files,
-            productId: req.params.id
+            files: req.files ? req.files.length : 0,
+            productId: req.params.id,
+            user: req.user ? req.user.id : 'No user'
         });
+        
+        // Manejo específico de errores de Cloudinary
+        if (err.message && err.message.includes('cloudinary')) {
+            return res.status(500).json({ 
+                message: 'Error al subir imágenes a Cloudinary', 
+                error: err.message 
+            });
+        }
+        
+        // Manejo específico de errores de Multer
+        if (err.message && err.message.includes('imagen')) {
+            return res.status(400).json({ 
+                message: 'Error en el archivo de imagen', 
+                error: err.message 
+            });
+        }
+        
         res.status(500).json({ 
-            message: 'Error interno del servidor al actualizar.',
-            error: err.message 
+            message: 'Error interno del servidor al actualizar producto',
+            error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno del servidor'
         });
     }
 });
