@@ -34,10 +34,8 @@ const RegisterPage: React.FC = () => {
       setLoading(true);
       setMessage('');
       try {
-        // ======================= CAMBIO AQUÍ =======================
-        // Pasamos 'register' para indicar la intención al backend
+        // ✅ CORRECTION: Pass 'register' as the second argument
         await loginWithGoogle(response.credential, 'register');
-        // =========================================================
         navigate('/');
       } catch (err: any) {
         setMessage('❌ ' + (err.message || 'Error al registrarse con Google.'));
@@ -76,7 +74,7 @@ const RegisterPage: React.FC = () => {
         setMessage("No se pudo cargar el botón de Google. Recarga la página.");
       }
     }
-  }, [isAuthenticated, navigate, loginWithGoogle]);
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;

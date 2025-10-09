@@ -27,7 +27,10 @@ const LoginPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const loggedInUser = await loginWithGoogle(response.credential);
+        // ======================= CAMBIO AQUÍ =======================
+        // Pasamos 'login' para indicar la intención al backend
+        const loggedInUser = await loginWithGoogle(response.credential, 'login');
+        // =========================================================
         if (loggedInUser.role === 'admin') {
           navigate('/admin');
         } else {
@@ -71,7 +74,7 @@ const LoginPage: React.FC = () => {
         setError("No se pudo cargar el botón de Google. Recarga la página.");
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, loginWithGoogle]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -94,11 +97,6 @@ const LoginPage: React.FC = () => {
 
   return (
     <Layout>
-      {/* ✅ CORRECCIÓN APLICADA AQUÍ:
-        - Se eliminó 'min-h-screen' para evitar que este div intente ocupar toda la altura de la pantalla.
-        - Se cambió 'pt-20' por 'py-20' para darle un padding vertical consistente y mejorar el centrado.
-        - El Layout se encargará de que todo ocupe el 100% de la altura correctamente.
-      */}
       <div className="flex items-center justify-center bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20">
         <div className="bg-gradient-to-r from-[#0b0b0b]/90 via-[#151515]/90 to-[#0b0b0b]/90 p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-sm backdrop-blur-sm">
           <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
