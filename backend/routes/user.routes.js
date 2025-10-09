@@ -202,8 +202,31 @@ router.post('/google-login', async (req, res) => {
     } else if (intent === 'login') {
       // Si la intención es iniciar sesión...
       if (!user) {
-        // ...pero el usuario NO existe, devolvemos un error.
-        return res.status(404).json({ message: 'Usuario no encontrado. Por favor, regístrate primero.' });
+        // ✨ NUEVA FUNCIONALIDAD: Auto-registro cuando no existe el usuario
+        console.log(`🔄 Auto-registrando usuario con Google: ${email}`);
+        
+        const password = email + process.env.JWT_SECRET;
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
+
+        const newUser = new User({
+          name,
+          email,
+          password: hashedPassword,
+          isVerified: true,
+          acceptedTerms: true, // Asumimos que al usar Google aceptan los términos
+          role: userRole
+        });
+        await newUser.save();
+        
+        const payload = { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role };
+        const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+        return res.json({ 
+          token: jwtToken, 
+          user: payload,
+          message: '¡Cuenta creada automáticamente! Bienvenido a Elegancia Urban.' 
+        });
       }
 
       // Si el usuario existe, procedemos a iniciar sesión (el flujo feliz de login)

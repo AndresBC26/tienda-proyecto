@@ -131,7 +131,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Usamos authenticateUser para manejar el guardado del estado
       authenticateUser(data.token, data.user);
-      return data.user;
+      
+      // Si hay un mensaje de auto-registro, lo retornamos junto con el usuario
+      return { 
+        ...data.user, 
+        autoRegistered: !!data.message,
+        welcomeMessage: data.message 
+      };
     } catch (error) {
       console.error('❌ Error detallado en loginWithGoogle:', error);
       

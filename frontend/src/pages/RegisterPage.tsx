@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../components/layout/Layout';
 import { useAuth } from '../contexts/AuthContext';
+import { useAutoRegisterNotification } from '../hooks/useAutoRegisterNotification';
 
 declare global {
   interface Window {
