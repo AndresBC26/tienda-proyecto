@@ -4,23 +4,7 @@ const router = express.Router();
 const Product = require('../models/Product');
 const multer = require('multer');
 const { storage } = require('../config/cloudinary');
-const jwt = require('jsonwebtoken');
-
-// Middleware de autenticación
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'No hay token, autorización denegada' });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
-    req.user = decoded;
-    next();
-  } catch (e) {
-    res.status(403).json({ message: 'Token no válido' });
-  }
-};
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 // Configuración mejorada de multer con validaciones
 const upload = multer({ 
@@ -48,7 +32,44 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+// Endpoint de prueba para subida de imágenes
+router.post('/test-upload', authenticateToken, requireAdmin, upload.single('testImage'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        message: 'No se recibió ningún archivo',
+        success: false
+      });
+    }
+    
+    console.log('✅ Test Upload Success:', {
+      filename: req.file.filename,
+      path: req.file.path,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      user: req.user.id
+    });
+    
+    res.json({
+      success: true,
+      message: 'Imagen subida exitosamente',
+      file: {
+        url: req.file.path,
+        filename: req.file.filename,
+        size: req.file.size
+      }
+    });
+  } catch (error) {
+    console.error('❌ Test Upload Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al subir imagen de prueba',
+      error: error.message
+    });
+  }
+});
+
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const deletedProduct = await Product.findByIdAndDelete(req.params.id);
     if (!deletedProduct) {
@@ -56,6 +77,12 @@ router.delete('/:id', async (req, res) => {
     }
     res.json({ message: 'Producto eliminado correctamente' });
   } catch (err) {
+    console.error('Error al eliminar producto:', {
+      message: err.message,
+      stack: err.stack,
+      productId: req.params.id,
+      user: req.user ? req.user.id : 'No user'
+    });
     res.status(500).json({ message: err.message });
   }
 });
@@ -85,8 +112,8 @@ const handleMulterError = (err, req, res, next) => {
   next(err);
 };
 
-// POST - Crear producto (requiere autenticación)
-router.post('/', authenticateToken, upload.array('imageFiles'), handleMulterError, async (req, res) => {
+// POST - Crear producto (requiere autenticación de admin)
+router.post('/', authenticateToken, requireAdmin, upload.array('imageFiles'), handleMulterError, async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
         const numericPrice = parseFloat(price);
@@ -146,8 +173,8 @@ router.post('/', authenticateToken, upload.array('imageFiles'), handleMulterErro
 
 
 // ====================== INICIO DE LA CORRECCIÓN DEFINITIVA ======================
-// PUT /api/products/:id - Actualizar un producto existente (requiere autenticación)
-router.put('/:id', authenticateToken, upload.array('imageFiles'), handleMulterError, async (req, res) => {
+// PUT /api/products/:id - Actualizar un producto existente (requiere autenticación de admin)
+router.put('/:id', authenticateToken, requireAdmin, upload.array('imageFiles'), handleMulterError, async (req, res) => {
     try {
         const { name, description, price, category, variants } = req.body;
 
