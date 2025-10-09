@@ -53,6 +53,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Montar rutas
+app.use('/api/health', require('./routes/health.routes'));
 app.use('/api/products', require('./routes/product.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/reviews', require('./routes/review.routes'));
