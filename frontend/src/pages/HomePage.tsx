@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
+import { useScrollVisibility } from '../hooks/useScrollVisibility';
 import { BiSolidTShirt, BiSolidLayer, BiSolidPalette } from "react-icons/bi";
 
 
@@ -162,6 +163,8 @@ const FeaturedProductsCarousel: React.FC = () => {
 
 
 const Homepage: React.FC = () => {
+  const { isVisible: titleVisible } = useScrollVisibility(300);
+
   return (
     // ✅ CORRECCIÓN DEFINITIVA: Se ha eliminado `min-h-screen` de esta línea.
     <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
@@ -210,11 +213,18 @@ const Homepage: React.FC = () => {
       {/* Sección de Características */}
       <section className="py-20 px-4 relative">
         <div className="container mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-16">
-            <span className="bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
-              ¿Por qué elegir Elegancia Urban?
-            </span>
-          </h2>
+          {/* Título visible solo en desktop, en móvil se oculta al hacer scroll */}
+          <div className="text-center mb-16 relative">
+            <h2 className={`text-4xl font-bold text-center mb-4 md:mb-16 transition-all duration-500 transform ${
+              titleVisible ? 'opacity-100 translate-y-0' : 'md:opacity-100 md:translate-y-0 opacity-0 -translate-y-4'
+            }`}>
+              <span className="bg-gradient-to-r from-[#60caba] to-[#FFD700] bg-clip-text text-transparent">
+                ¿Por qué elegir Elegancia Urban?
+              </span>
+            </h2>
+            {/* Línea decorativa que permanece visible */}
+            <div className="w-24 h-1 bg-gradient-to-r from-[#60caba] to-[#FFD700] mx-auto rounded-full opacity-100"></div>
+          </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[
