@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 // ========== IMPORTAR RUTAS ==========
-// Se importan todos tus archivos de rutas con los nombres correctos
 const productRoutes = require('./routes/product.routes');
 const userRoutes = require('./routes/user.routes');
 const paymentRoutes = require('./routes/payment.routes');
@@ -13,10 +12,9 @@ const contactRoutes = require('./routes/contact.routes');
 const reviewRoutes = require('./routes/review.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const healthRoutes = require('./routes/health.routes');
-// Asegúrate de tener este archivo 'order.routes.js' o elimínalo si no lo usas
 const orderRoutes = require('./routes/order.routes'); 
 
-// ========== CONFIGURACIÓN DE CLOUDINARY (INTACTA) ==========
+// ========== CONFIGURACIÓN DE CLOUDINARY ==========
 const { testCloudinaryConnection } = require('./config/cloudinary');
 
 const app = express();
@@ -41,7 +39,6 @@ app.use((req, res, next) => {
 });
 
 // ========== RUTAS ==========
-// Se configuran todas las rutas importadas
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -68,14 +65,16 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ========== 🔹 CORRECCIÓN APLICADA AQUÍ 🔹 ==========
 // Ruta no encontrada (debe ir al final)
-app.use('*', (req, res) => {
+app.all('*', (req, res) => {
   res.status(404).json({ 
     success: false,
     message: 'Ruta no encontrada',
     path: req.originalUrl
   });
 });
+// =======================================================
 
 // ========== CONEXIÓN A LA BASE DE DATOS E INICIO DEL SERVIDOR ==========
 const PORT = process.env.PORT || 5000;
@@ -90,7 +89,6 @@ mongoose.connect(MONGODB_URI)
   .then(async () => {
     console.log('✅ MongoDB conectado exitosamente');
     
-    // Test de conexión a Cloudinary (INTACTO)
     const cloudinaryOk = await testCloudinaryConnection();
     
     app.listen(PORT, () => {
