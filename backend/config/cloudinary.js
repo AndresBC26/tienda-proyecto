@@ -2,50 +2,86 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// NO es necesario volver a configurar las credenciales aquí.
-// El archivo server.js ya lo hizo por toda la aplicación.
+// ========== CONFIGURACIÓN DE CLOUDINARY ==========
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-// Simplemente crea el objeto de almacenamiento para que Multer lo use.
+// Verificar configuración al iniciar
+console.log('☁️  Cloudinary Config:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? '✅ Configurado' : '❌ Falta',
+  api_key: process.env.CLOUDINARY_API_KEY ? '✅ Configurado' : '❌ Falta',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '✅ Configurado' : '❌ Falta'
+});
+
+// ========== CONFIGURACIÓN DEL STORAGE ==========
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'elegancia_urban_products', // El nombre de tu carpeta en Cloudinary
-    allowed_formats: ['jpeg', 'png', 'jpg', 'webp'],
-    // Opcional: optimiza y estandariza el tamaño de las imágenes subidas
-    transformation: [{ width: 1024, height: 1024, crop: 'limit' }],
-    // Configuración adicional para manejo de errores
-    resource_type: 'image',
-    public_id: (req, file) => {
-      // Genera un nombre único para cada imagen
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 15);
-      return `product_${timestamp}_${randomString}`;
-    }
-  },
+    folder: 'products', // Carpeta en Cloudinary
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+    transformation: [
+      { 
+        width: 1200, 
+        height: 1200, 
+        crop: 'limit',
+        quality: 'auto:good'
+      }
+    ]
+  }
 });
 
-// Función para verificar la configuración de Cloudinary
-const verifyCloudinaryConfig = () => {
+// ========== FUNCIÓN PARA ELIMINAR IMÁGENES ==========
+const deleteImage = async (imageUrl) => {
   try {
-    const config = cloudinary.config();
-    if (!config.cloud_name || !config.api_key || !config.api_secret) {
-      console.error('❌ Error: Configuración de Cloudinary incompleta');
-      console.error('Verifica que las variables de entorno estén configuradas:');
-      console.error('- CLOUDINARY_CLOUD_NAME');
-      console.error('- CLOUDINARY_API_KEY');
-      console.error('- CLOUDINARY_API_SECRET');
+    // Extraer el public_id de la URL de Cloudinary
+    // Ejemplo: https://res.cloudinary.com/xxx/image/upload/v123456/products/abc123.jpg
+    const urlParts = imageUrl.split('/');
+    const uploadIndex = urlParts.indexOf('upload');
+    
+    if (uploadIndex === -1) {
+      console.warn('⚠️  URL no parece ser de Cloudinary:', imageUrl);
       return false;
     }
-    console.log('✅ Configuración de Cloudinary verificada correctamente');
-    return true;
+    
+    // Obtener todo después de 'upload/vXXXXXX/'
+    const publicIdWithExtension = urlParts.slice(uploadIndex + 2).join('/');
+    const publicId = publicIdWithExtension.split('.')[0];
+    
+    console.log('🗑️  Intentando eliminar imagen:', publicId);
+    
+    const result = await cloudinary.uploader.destroy(publicId);
+    
+    if (result.result === 'ok') {
+      console.log('✅ Imagen eliminada exitosamente:', publicId);
+      return true;
+    } else {
+      console.warn('⚠️  No se pudo eliminar la imagen:', result);
+      return false;
+    }
   } catch (error) {
-    console.error('❌ Error al verificar configuración de Cloudinary:', error.message);
+    console.error('❌ Error al eliminar imagen:', error.message);
     return false;
   }
 };
 
-module.exports = {
-  cloudinary,
+// ========== TEST DE CONEXIÓN ==========
+const testCloudinaryConnection = async () => {
+  try {
+    const result = await cloudinary.api.ping();
+    console.log('✅ Cloudinary conectado exitosamente:', result);
+    return true;
+  } catch (error) {
+    console.error('❌ Error al conectar con Cloudinary:', error.message);
+    return false;
+  }
+};
+
+module.exports = { 
+  cloudinary, 
   storage,
-  verifyCloudinaryConfig,
+  deleteImage,
+  testCloudinaryConnection
 };

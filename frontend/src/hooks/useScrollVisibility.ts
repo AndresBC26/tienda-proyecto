@@ -1,35 +1,25 @@
-// src/hooks/useScrollVisibility.ts
 import { useState, useEffect } from 'react';
 
 export const useScrollVisibility = (threshold: number = 100) => {
-  const [isVisible, setIsVisible] = useState(true);
-  const [scrollY, setScrollY] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      setScrollY(currentScrollY);
-      
-      // En pantallas móviles (menos de 768px), ocultar después del threshold
-      if (window.innerWidth < 768) {
-        setIsVisible(currentScrollY < threshold);
-      } else {
-        // En desktop, siempre visible
-        setIsVisible(true);
-      }
+      const scrollY = window.scrollY;
+      setIsVisible(scrollY > threshold);
     };
 
-    // Verificar el tamaño inicial de la pantalla
+    // Add event listener
+    window.addEventListener('scroll', handleScroll);
+
+    // Check initial scroll position
     handleScroll();
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
-
+    // Cleanup
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
     };
   }, [threshold]);
 
-  return { isVisible, scrollY };
+  return { isVisible };
 };
