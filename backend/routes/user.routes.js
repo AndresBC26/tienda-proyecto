@@ -346,4 +346,71 @@ router.put('/:userId/cart', auth, async (req, res) => {
     }
 });
 
+// ========================================================================
+// =====      ✅ RUTA PARA LOGIN Y REGISTRO CON GOOGLE (FALTANTE)      =====
+// ========================================================================
+router.post('/google-login', async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ message: 'No se proporcionó el token de Google.' });
+  }
+
+  try {
+    // 1. Verificar el token de Google
+    const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
+    });
+    const { name, email, sub: googleId } = ticket.getPayload();
+
+    // 2. Buscar si el usuario ya existe
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Si el usuario existe, nos aseguramos de que su googleId esté guardado
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      // 3. Si el usuario NO existe, lo creamos (auto-registro)
+      const password = email + process.env.JWT_SECRET; // Contraseña segura y aleatoria
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
+
+      user = new User({
+        name,
+        email,
+        password: hashedPassword,
+        googleId,
+        isVerified: true, // Las cuentas de Google se verifican automáticamente
+        acceptedTerms: true,
+        role: userRole
+      });
+      await user.save();
+    }
+
+    // 4. Crear el token JWT para nuestra aplicación y enviarlo
+    const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
+    const jwtToken = jwt.sign(
+        payload,
+        process.env.JWT_SECRET || 'your_jwt_secret',
+        { expiresIn: '7d' }
+    );
+    
+    res.json({
+        message: 'Autenticación con Google exitosa',
+        token: jwtToken,
+        user: payload
+    });
+
+  } catch (error) {
+    console.error("Error en google-login:", error);
+    res.status(400).json({ message: 'La autenticación con Google falló.' });
+  }
+});
+// ========================================================================
+
 module.exports = router;
