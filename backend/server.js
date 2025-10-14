@@ -4,9 +4,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-// ====================== MEJORA INTEGRADA ======================
-// 1. Importar y configurar Cloudinary al inicio.
-// Esto es crucial para que `multer` pueda autenticarse y subir archivos.
+// ===============================================================
+// 1. CONFIGURACIÓN DE SERVICIOS EXTERNOS (Cloudinary)
+// ===============================================================
 const cloudinary = require('cloudinary').v2;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -14,9 +14,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true
 });
-// ===============================================================
+const { testCloudinaryConnection } = require('./config/cloudinary');
 
-// ========== IMPORTAR RUTAS ==========
+// ===============================================================
+// 2. IMPORTACIÓN DE RUTAS
+// ===============================================================
 const productRoutes = require('./routes/product.routes');
 const userRoutes = require('./routes/user.routes');
 const paymentRoutes = require('./routes/payment.routes');
@@ -26,11 +28,13 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const healthRoutes = require('./routes/health.routes');
 const orderRoutes = require('./routes/order.routes');
 
-const { testCloudinaryConnection } = require('./config/cloudinary');
-
 const app = express();
 
-// ========== CONFIGURACIÓN DE CORS ==========
+// ===============================================================
+// 3. CONFIGURACIÓN DE MIDDLEWARES
+// ===============================================================
+
+// --- CORS ---
 const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
@@ -38,32 +42,26 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// ========================================================================
-// =====      ✅ INICIO DE LA CORRECCIÓN: MIDDLEWARE DE SEGURIDAD       =====
-// ========================================================================
-// Este middleware establece las cabeceras necesarias para permitir que el
-// popup de Google Sign-In se comunique con tu aplicación principal.
+// --- Cabeceras de Seguridad (Solución para Google Login) ---
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
   next();
 });
-// ========================================================================
-// =====       FIN DE LA CORRECCIÓN: MIDDLEWARE DE SEGURIDAD          =====
-// ========================================================================
 
-
-// ========== MIDDLEWARES ==========
+// --- Body Parsers ---
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ========== LOGGING MIDDLEWARE (OPCIONAL) ==========
+// --- Logging (Opcional pero útil) ---
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.path}`);
   next();
 });
 
-// ========== RUTAS ==========
+// ===============================================================
+// 4. DEFINICIÓN DE RUTAS DE LA API
+// ===============================================================
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -73,7 +71,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/orders', orderRoutes);
 
-// Ruta raíz
+// --- Ruta Raíz ---
 app.get('/', (req, res) => {
   res.json({
     message: 'API de E-commerce funcionando',
@@ -81,7 +79,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// ========== MANEJO DE ERRORES GLOBAL ==========
+// ===============================================================
+// 5. MANEJO DE ERRORES (Debe ir después de las rutas)
+// ===============================================================
+
+// --- Manejador de Errores Global ---
 app.use((err, req, res, next) => {
   console.error('❌ Error Global:', { message: err.message });
   res.status(err.status || 500).json({
@@ -90,8 +92,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-
-// Middleware para manejar rutas no encontradas (404). Debe ir al final.
+// --- Manejador para Rutas no Encontradas (404) ---
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
@@ -100,8 +101,9 @@ app.use((req, res, next) => {
   });
 });
 
-
-// ========== CONEXIÓN A LA BASE DE DATOS E INICIO DEL SERVIDOR ==========
+// ===============================================================
+// 6. INICIO DEL SERVIDOR Y CONEXIÓN A LA BASE DE DATOS
+// ===============================================================
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
