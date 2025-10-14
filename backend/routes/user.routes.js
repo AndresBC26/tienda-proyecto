@@ -10,7 +10,6 @@ const { OAuth2Client } = require('google-auth-library');
 
 const client = new OAuth2Client('714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com');
 
-// Middleware de autenticación
 const auth = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
@@ -25,7 +24,6 @@ const auth = (req, res, next) => {
     }
 };
 
-// --- RUTA PARA OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
 router.get('/', auth, async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
@@ -39,15 +37,12 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
-// --- RUTA PARA VERIFICAR SESIÓN ---
 router.get('/me', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
         if (!user) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
-        
-        // ✅ MEJORA: AÑADIMOS hasPassword
         res.json({
             _id: user._id,
             name: user.name,
@@ -56,7 +51,7 @@ router.get('/me', auth, async (req, res) => {
             googleId: user.googleId || null,
             isVerified: user.isVerified,
             wantsEmails: user.wantsEmails,
-            hasPassword: !!user.password // Devuelve true si el campo password existe y no es nulo
+            hasPassword: !!user.password
         });
     } catch (err) {
         console.error("Error en /me:", err);
@@ -64,7 +59,6 @@ router.get('/me', auth, async (req, res) => {
     }
 });
 
-// --- REGISTRO CON ENVÍO SEGURO ---
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password, wantsEmails, acceptedTerms } = req.body;
@@ -82,46 +76,34 @@ router.post('/register', async (req, res) => {
             verificationToken,
             isVerified: false
         });
-
         await newUser.save();
-
         const verificationUrl = `${process.env.FRONTEND_URL}/#/verify-email/${verificationToken}`;
-
         const emailHtml = `
-      <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 12px; max-width: 600px; margin: auto; background-color: #f9f9f9;">
-        <h1 style="color: #60caba;">¡Bienvenido a Elegancia Urban!</h1>
-        <p style="font-size: 16px;">Gracias por registrarte. Por favor, haz clic en el botón para verificar tu cuenta:</p>
-        <a href="${verificationUrl}" style="background: linear-gradient(to right, #60caba, #FFD700); color: #000; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; margin: 20px 0;">Verificar mi Cuenta</a>
-        <p style="font-size: 12px; color: #888;">Si el botón no funciona, copia y pega este enlace: ${verificationUrl}</p>
-      </div>
-    `;
-
+            <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 12px; max-width: 600px; margin: auto; background-color: #f9f9f9;">
+                <h1 style="color: #60caba;">¡Bienvenido a Elegancia Urban!</h1>
+                <p style="font-size: 16px;">Gracias por registrarte. Por favor, haz clic en el botón para verificar tu cuenta:</p>
+                <a href="${verificationUrl}" style="background: linear-gradient(to right, #60caba, #FFD700); color: #000; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; margin: 20px 0;">Verificar mi Cuenta</a>
+                <p style="font-size: 12px; color: #888;">Si el botón no funciona, copia y pega este enlace: ${verificationUrl}</p>
+            </div>`;
         await sendEmail({ to: newUser.email, subject: 'Verificación de cuenta - Elegancia Urban', html: emailHtml });
-
         res.status(201).json({ message: '¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.' });
-
     } catch (err) {
         console.error("Error en registro o envío de correo:", err);
-        res.status(500).json({ message: 'Se creó la cuenta, pero falló el envío del correo de verificación. Revisa la configuración del servidor de correo.' });
+        res.status(500).json({ message: 'Se creó la cuenta, pero falló el envío del correo de verificación.' });
     }
 });
 
-// --- LOGIN CON EMAIL Y CONTRASEÑA ---
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-
         const user = await User.findOne({ email });
-        if (!user) {
+        if (!user || !user.password) {
             return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
         }
-
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
         }
-
-        // ✅ MEJORA: AÑADIMOS hasPassword
         const payload = {
             id: user._id,
             name: user.name,
@@ -130,64 +112,36 @@ router.post('/login', async (req, res) => {
             googleId: user.googleId || null,
             hasPassword: !!user.password
         };
-
-        const token = jwt.sign(
-            payload,
-            process.env.JWT_SECRET || 'your_jwt_secret',
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            message: 'Inicio de sesión exitoso',
-            token,
-            user: payload,
-        });
-
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+        res.json({ message: 'Inicio de sesión exitoso', token, user: payload });
     } catch (err) {
         console.error("Error en login:", err);
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 });
 
-// --- LOGIN Y REGISTRO CON GOOGLE ---
 router.post('/google-login', async (req, res) => {
     const { token } = req.body;
-
     if (!token) {
         return res.status(400).json({ message: 'No se proporcionó el token de Google.' });
     }
-
     try {
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
         });
         const { name, email, sub: googleId } = ticket.getPayload();
-
         let user = await User.findOne({ email });
-
         if (user) {
             if (!user.googleId) {
                 user.googleId = googleId;
                 await user.save();
             }
         } else {
-            // Un usuario que se registra con Google no tendrá contraseña local
             const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
-
-            user = new User({
-                name,
-                email,
-                password: null, // explícitamente nulo
-                googleId,
-                isVerified: true,
-                acceptedTerms: true,
-                role: userRole
-            });
+            user = new User({ name, email, password: null, googleId, isVerified: true, acceptedTerms: true, role: userRole });
             await user.save();
         }
-
-        // ✅ MEJORA: AÑADIMOS hasPassword
         const payload = { 
             id: user._id, 
             name: user.name, 
@@ -196,47 +150,8 @@ router.post('/google-login', async (req, res) => {
             googleId: user.googleId,
             hasPassword: !!user.password
         };
-        
-        const jwtToken = jwt.sign(
-            payload,
-            process.env.JWT_SECRET || 'your_jwt_secret',
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            message: 'Autenticación con Google exitosa',
-            token: jwtToken,
-            user: payload
-        });
-
-    } catch (error) {
-        console.error("Error en google-login:", error);
-        res.status(400).json({ message: 'La autenticación con Google falló.' });
-    }
-});
-
-
-        // CRÍTICO: Incluir googleId en el payload del token
-        const payload = { 
-            id: user._id, 
-            name: user.name, 
-            email: user.email, 
-            role: user.role,
-            googleId: user.googleId
-        };
-        
-        const jwtToken = jwt.sign(
-            payload,
-            process.env.JWT_SECRET || 'your_jwt_secret',
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            message: 'Autenticación con Google exitosa',
-            token: jwtToken,
-            user: payload
-        });
-
+        const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+        res.json({ message: 'Autenticación con Google exitosa', token: jwtToken, user: payload });
     } catch (error) {
         console.error("Error en google-login:", error);
         res.status(400).json({ message: 'La autenticación con Google falló.' });
