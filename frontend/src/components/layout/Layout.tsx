@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import TopBanner from '../common/TopBanner';
-import { colors } from '../../utils/colors';
+import { colors } from '../../utils/colors'; // Asegúrate de que esta importación exista
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,24 +18,30 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden">
-      <div
-        className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ease-in-out ${
-          isScrolled ? '-translate-y-8' : 'translate-y-0'
-        }`}
-      >
-        <TopBanner />
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${     
+            isScrolled ? 'max-h-1' : 'max-h-12' 
+          }`}
+        >
+          <TopBanner />
+        </div>
         <Header />
       </div>
 
-      <main className="flex-1 relative overflow-hidden pt-[170px] lg:pt-24">
+      <main
+        className={`flex-1 relative transition-all duration-300 ease-in-out ${
+          isScrolled ? 'pt-28 lg:pt-24' : 'pt-36 lg:pt-32'
+        }`}
+      >
+        {/* Se restauran los gradientes decorativos del fondo */}
         <div className="absolute inset-0 opacity-30">
           <div
             className="absolute inset-0"

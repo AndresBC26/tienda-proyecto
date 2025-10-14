@@ -1,15 +1,13 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// ====================== MEJORA 1: INTERFAZ ACTUALIZADA ======================
-// Se añade 'googleId' para que el frontend sepa si la cuenta está vinculada.
-// ============================================================================
+// Interfaces (sin cambios)
 interface UserData {
   _id: string;
   name: string;
   email: string;
   role: 'user' | 'admin';
-  googleId?: string; // Campo opcional para el ID de Google
+  googleId?: string; 
 }
 
 interface AuthState {
@@ -18,9 +16,6 @@ interface AuthState {
   loading: boolean;
 }
 
-// ====================== MEJORA 2: NUEVA FUNCIÓN EN EL TIPO ======================
-// Se añade la firma de la nueva función 'linkWithGoogle'.
-// ==============================================================================
 interface AuthContextType extends AuthState {
   login: (credentials: any) => Promise<any>;
   loginWithGoogle: (token: string, intent: 'register' | 'login') => Promise<any>;
@@ -28,19 +23,19 @@ interface AuthContextType extends AuthState {
   updateUserData: (data: { user: UserData; token: string }) => void;
   setCartDispatch: (dispatch: React.Dispatch<any>) => void;
   authenticateUser: (token: string, user: UserData) => void; 
-  linkWithGoogle: (token: string) => Promise<void>; // <-- NUEVA FUNCIÓN
+  linkWithGoogle: (token: string) => Promise<void>;
+  unlinkGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_URL = process.env.REACT_APP_API_URL;
-let isCheckingSession = false;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
-    loading: true,
+    loading: true, // Inicia en 'true' para mostrar carga mientras se verifica la sesión
   });
   const [cartDispatch, setCartDispatch] = useState<React.Dispatch<any> | null>(null);
 
@@ -49,11 +44,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthState({ isAuthenticated: true, user: user, loading: false });
   };
 
+  // =================================================================================
+  // =====      ✅ MEJORA CLAVE: LÓGICA PARA VERIFICAR Y RESTAURAR LA SESIÓN      =====
+  // =================================================================================
   useEffect(() => {
-    // ... Tu código de checkSession se mantiene igual ...
-  }, []);
+    const checkSession = async () => {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        try {
+          if (!API_URL) throw new Error("API URL no está configurada");
+          
+          const res = await fetch(`${API_URL}/api/users/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
 
-  // --- FUNCIÓN PARA INICIO DE SESIÓN CON CREDENCIALES (CORREGIDA) ---
+          if (res.ok) {
+            const user = await res.json();
+            // Restaura la sesión con los datos más recientes del backend
+            authenticateUser(token, user);
+          } else {
+            // Si el token es inválido o expiró, se limpia todo
+            localStorage.removeItem('token');
+            setAuthState({ isAuthenticated: false, user: null, loading: false });
+          }
+        } catch (error) {
+          console.error("Error al verificar la sesión:", error);
+          localStorage.removeItem('token');
+          setAuthState({ isAuthenticated: false, user: null, loading: false });
+        }
+      } else {
+        // Si no hay token, simplemente se termina la carga
+        setAuthState(prevState => ({ ...prevState, loading: false }));
+      }
+    };
+
+    checkSession();
+  }, []); // El array vacío asegura que esto solo se ejecute una vez al montar el componente
+
+  // --- FUNCIÓN PARA INICIO DE SESIÓN CON CREDENCIALES ---
   const login = async (credentials: any) => {
     if (!API_URL) throw new Error("REACT_APP_API_URL no está configurada. Revisa tu archivo .env");
     
@@ -64,16 +95,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     const data = await res.json(); 
-
     if (!res.ok) throw new Error(data.message || 'Credenciales inválidas');
     
     authenticateUser(data.token, data.user);
-
-    // ===================================================================
-    // =====      ✅ ESTA ES LA LÍNEA QUE FALTABA Y SOLUCIONA TODO     =====
-    // ===================================================================
     return data.user; 
-    // ===================================================================
   };
 
   // --- FUNCIÓN PARA GOOGLE LOGIN ---
@@ -106,9 +131,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  // ========================================================================
-  // =====      FUNCIÓN PARA VINCULAR CUENTAS (YA ESTÁ CORRECTA)         =====
-  // ========================================================================
+  // --- FUNCIÓN PARA VINCULAR CUENTAS CON GOOGLE ---
   const linkWithGoogle = async (token: string) => {
     const authToken = localStorage.getItem('token');
     if (!API_URL || !authToken) {
@@ -130,6 +153,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     updateUserData(data); 
+  };
+
+  // --- FUNCIÓN PARA DESVINCULAR CUENTA DE GOOGLE ---
+  const unlinkGoogle = async () => {
+    const authToken = localStorage.getItem('token');
+    if (!API_URL || !authToken) {
+      throw new Error("Operación no permitida. Se requiere autenticación.");
+    }
+
+    const res = await fetch(`${API_URL}/api/users/unlink-google`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+      },
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Error al desvincular la cuenta de Google.');
+    }
+    
+    updateUserData(data);
   };
 
   const logout = () => {
@@ -158,7 +203,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateUserData, 
         setCartDispatch: setDispatch, 
         authenticateUser,
-        linkWithGoogle
+        linkWithGoogle,
+        unlinkGoogle
     }}>
       {children}
     </AuthContext.Provider>

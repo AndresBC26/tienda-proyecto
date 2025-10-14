@@ -9,7 +9,7 @@ const { OAuth2Client } = require('google-auth-library');
 
 const client = new OAuth2Client('714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com');
 
-// Middleware de autenticación (sin cambios)
+// Middleware de autenticación
 const auth = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
@@ -26,18 +26,43 @@ const auth = (req, res, next) => {
 
 // --- RUTA PARA OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
 router.get('/', auth, async (req, res) => {
-    // ... (Tu código existente aquí - sin cambios)
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Acceso denegado' });
+        }
+        const users = await User.find().select('-password');
+        res.json(users);
+    } catch (err) {
+        console.error("Error al obtener usuarios:", err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
 });
 
 // --- RUTA PARA VERIFICAR SESIÓN ---
 router.get('/me', auth, async (req, res) => {
-    // ... (Tu código existente aquí - sin cambios)
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        
+        // CRÍTICO: Devolver el googleId para que el frontend sepa si está vinculado
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            googleId: user.googleId || null,
+            isVerified: user.isVerified,
+            wantsEmails: user.wantsEmails
+        });
+    } catch (err) {
+        console.error("Error en /me:", err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
 });
 
-
-// ========================================================================
-// =====      REGISTRO CON ENVÍO SEGURO                             =====
-// ========================================================================
+// --- REGISTRO CON ENVÍO SEGURO ---
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password, wantsEmails, acceptedTerms } = req.body;
@@ -79,32 +104,28 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// ========================================================================
-// =====          ✅ INICIO DE LA RUTA LOGIN (AÑADIDA)                 =====
-// ========================================================================
+// --- LOGIN CON EMAIL Y CONTRASEÑA ---
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Buscar al usuario por su correo electrónico
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
         }
 
-        // 2. Comparar la contraseña ingresada con la guardada en la base de datos
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
         }
 
-        // 3. Si todo es correcto, crear un token JWT
+        // CRÍTICO: Incluir googleId en el payload del token
         const payload = {
             id: user._id,
             name: user.name,
             email: user.email,
             role: user.role,
-            googleId: user.googleId
+            googleId: user.googleId || null
         };
 
         const token = jwt.sign(
@@ -113,7 +134,6 @@ router.post('/login', async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        // 4. Enviar el token y los datos del usuario al frontend
         res.json({
             message: 'Inicio de sesión exitoso',
             token,
@@ -125,14 +145,77 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 });
-// ========================================================================
-// =====           FIN DE LA RUTA LOGIN (AÑADIDA)                   =====
-// ========================================================================
 
+// --- LOGIN Y REGISTRO CON GOOGLE ---
+router.post('/google-login', async (req, res) => {
+    const { token } = req.body;
 
-// =================================================================
-// --- ✨ NUEVA RUTA: VINCULAR CUENTA DE GOOGLE (YA LOGUEADO) ---
-// =================================================================
+    if (!token) {
+        return res.status(400).json({ message: 'No se proporcionó el token de Google.' });
+    }
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
+        });
+        const { name, email, sub: googleId } = ticket.getPayload();
+
+        let user = await User.findOne({ email });
+
+        if (user) {
+            // Usuario existe: actualizar googleId si no lo tiene
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+        } else {
+            // Usuario nuevo: crear cuenta con Google
+            const password = email + process.env.JWT_SECRET;
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
+
+            user = new User({
+                name,
+                email,
+                password: hashedPassword,
+                googleId,
+                isVerified: true,
+                acceptedTerms: true,
+                role: userRole
+            });
+            await user.save();
+        }
+
+        // CRÍTICO: Incluir googleId en el payload del token
+        const payload = { 
+            id: user._id, 
+            name: user.name, 
+            email: user.email, 
+            role: user.role,
+            googleId: user.googleId
+        };
+        
+        const jwtToken = jwt.sign(
+            payload,
+            process.env.JWT_SECRET || 'your_jwt_secret',
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            message: 'Autenticación con Google exitosa',
+            token: jwtToken,
+            user: payload
+        });
+
+    } catch (error) {
+        console.error("Error en google-login:", error);
+        res.status(400).json({ message: 'La autenticación con Google falló.' });
+    }
+});
+
+// --- VINCULAR CUENTA DE GOOGLE (USUARIO YA LOGUEADO) ---
 router.post('/link-google', auth, async (req, res) => {
     const { token } = req.body;
     const userId = req.user.id;
@@ -161,12 +244,24 @@ router.post('/link-google', auth, async (req, res) => {
         currentUser.googleId = googleId;
         await currentUser.save();
 
-        const payload = { id: currentUser._id, name: currentUser.name, email: currentUser.email, role: currentUser.role };
-        const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+        // CRÍTICO: Incluir googleId en el payload del token
+        const payload = { 
+            id: currentUser._id, 
+            name: currentUser.name, 
+            email: currentUser.email, 
+            role: currentUser.role,
+            googleId: currentUser.googleId
+        };
+        
+        const jwtToken = jwt.sign(
+            payload, 
+            process.env.JWT_SECRET || 'your_jwt_secret', 
+            { expiresIn: '7d' }
+        );
 
         res.json({
             message: '¡Cuenta de Google vinculada exitosamente!',
-            user: { ...payload, googleId: currentUser.googleId }, // Devolvemos el googleId en el user
+            user: payload,
             token: jwtToken
         });
 
@@ -175,8 +270,47 @@ router.post('/link-google', auth, async (req, res) => {
         res.status(400).json({ message: 'La autenticación con Google falló durante la vinculación.' });
     }
 });
-// ====================================================================
 
+// --- DESVINCULAR CUENTA DE GOOGLE ---
+router.post('/unlink-google', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+
+        if (!user.googleId) {
+            return res.status(400).json({ message: 'No tienes una cuenta de Google vinculada.' });
+        }
+
+        user.googleId = null;
+        await user.save();
+
+        const payload = { 
+            id: user._id, 
+            name: user.name, 
+            email: user.email, 
+            role: user.role,
+            googleId: null
+        };
+        
+        const jwtToken = jwt.sign(
+            payload, 
+            process.env.JWT_SECRET || 'your_jwt_secret', 
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            message: 'Cuenta de Google desvinculada exitosamente.',
+            user: payload,
+            token: jwtToken
+        });
+
+    } catch (error) {
+        console.error("Error al desvincular cuenta de Google:", error);
+        res.status(500).json({ message: 'Error del servidor al desvincular.' });
+    }
+});
 
 // --- RECUPERACIÓN DE CONTRASEÑA ---
 router.post('/forgot-password', async (req, res) => {
@@ -261,8 +395,22 @@ router.put('/:id', auth, async (req, res) => {
             user.name = name;
         }
         const updatedUser = await user.save();
-        const payload = { id: updatedUser._id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role };
-        const token = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+        
+        // CRÍTICO: Incluir googleId en el payload del token
+        const payload = { 
+            id: updatedUser._id, 
+            name: updatedUser.name, 
+            email: updatedUser.email, 
+            role: updatedUser.role,
+            googleId: updatedUser.googleId || null
+        };
+        
+        const token = jwt.sign(
+            payload, 
+            process.env.JWT_SECRET || 'your_jwt_secret', 
+            { expiresIn: '7d' }
+        );
+        
         res.json({
             message: 'Perfil actualizado exitosamente',
             user: payload,
@@ -345,72 +493,5 @@ router.put('/:userId/cart', auth, async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
-// ========================================================================
-// =====      ✅ RUTA PARA LOGIN Y REGISTRO CON GOOGLE (FALTANTE)      =====
-// ========================================================================
-router.post('/google-login', async (req, res) => {
-  const { token } = req.body;
-
-  if (!token) {
-    return res.status(400).json({ message: 'No se proporcionó el token de Google.' });
-  }
-
-  try {
-    // 1. Verificar el token de Google
-    const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
-    });
-    const { name, email, sub: googleId } = ticket.getPayload();
-
-    // 2. Buscar si el usuario ya existe
-    let user = await User.findOne({ email });
-
-    if (user) {
-      // Si el usuario existe, nos aseguramos de que su googleId esté guardado
-      if (!user.googleId) {
-        user.googleId = googleId;
-        await user.save();
-      }
-    } else {
-      // 3. Si el usuario NO existe, lo creamos (auto-registro)
-      const password = email + process.env.JWT_SECRET; // Contraseña segura y aleatoria
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
-
-      user = new User({
-        name,
-        email,
-        password: hashedPassword,
-        googleId,
-        isVerified: true, // Las cuentas de Google se verifican automáticamente
-        acceptedTerms: true,
-        role: userRole
-      });
-      await user.save();
-    }
-
-    // 4. Crear el token JWT para nuestra aplicación y enviarlo
-    const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
-    const jwtToken = jwt.sign(
-        payload,
-        process.env.JWT_SECRET || 'your_jwt_secret',
-        { expiresIn: '7d' }
-    );
-    
-    res.json({
-        message: 'Autenticación con Google exitosa',
-        token: jwtToken,
-        user: payload
-    });
-
-  } catch (error) {
-    console.error("Error en google-login:", error);
-    res.status(400).json({ message: 'La autenticación con Google falló.' });
-  }
-});
-// ========================================================================
 
 module.exports = router;

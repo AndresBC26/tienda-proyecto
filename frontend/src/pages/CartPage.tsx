@@ -231,19 +231,6 @@ const CartPage: React.FC = () => {
                   <span className="text-2xl font-bold text-[#FFD700]">${finalTotal.toLocaleString()}</span>
                 </div>
               </div>
-              <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-400 mb-2">Código de descuento</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ingresa tu código"
-                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#60caba] focus:border-transparent transition-all duration-200"
-                  />
-                  <button className="bg-white/10 border border-white/20 text-gray-200 px-4 py-2 rounded-xl hover:bg-white/20 transition-all duration-200 font-medium">
-                    Aplicar
-                  </button>
-                </div>
-              </div>
               <div className="space-y-4">
                 <Link
                   to="/checkout"

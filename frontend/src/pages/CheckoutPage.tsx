@@ -277,7 +277,7 @@ const CheckoutPage: React.FC = () => {
                       name="department"
                       value={shippingAddress.department}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#60caba] focus:border-transparent transition-all duration-200"
+                      className="w-full px-4 py-3 bg-black/10 border border-white/20 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#60caba] focus:border-transparent transition-all duration-200"
                       required
                     >
                       <option value="">Selecciona tu departamento</option>
@@ -356,7 +356,7 @@ const CheckoutPage: React.FC = () => {
                       <span className="font-semibold text-[#60caba]">GRATIS</span>
                     ) : (
                       <span className="font-semibold text-gray-100">${shippingCost.toLocaleString()}</span>
-                    )}
+                    )}                          
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Descuento (10%)</span>
