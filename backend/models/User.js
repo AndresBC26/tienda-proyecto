@@ -10,7 +10,19 @@ const cartItemSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  // AHORA LA CONTRASEÑA NO ES SIEMPRE REQUERIDA
+  password: { type: String }, 
+  
+  // ====================== MEJORA APLICADA ======================
+  //  NUEVO CAMPO PARA VINCULAR LA CUENTA DE GOOGLE
+  // =============================================================
+  googleId: { 
+    type: String, 
+    unique: true, 
+    sparse: true // Permite valores únicos pero también nulos
+  },
+  // =============================================================
+
   wantsEmails: { type: Boolean, default: true },
   acceptedTerms: {
     type: Boolean,
@@ -24,10 +36,8 @@ const userSchema = new mongoose.Schema({
   cart: [cartItemSchema],
   
   // --- CAMPOS DE VERIFICACIÓN ---
-  // ASEGÚRATE DE QUE ESTAS DOS LÍNEAS ESTÉN AQUÍ
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
-  // ------------------------------------
   
   // ===== CAMPOS PARA RESETEO DE CONTRASEÑA =====
   resetPasswordToken: { type: String },
