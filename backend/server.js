@@ -4,6 +4,18 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
+// ====================== MEJORA INTEGRADA ======================
+// 1. Importar y configurar Cloudinary al inicio.
+// Esto es crucial para que `multer` pueda autenticarse y subir archivos.
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
+// ===============================================================
+
 // ========== IMPORTAR RUTAS ==========
 const productRoutes = require('./routes/product.routes');
 const userRoutes = require('./routes/user.routes');
@@ -12,9 +24,8 @@ const contactRoutes = require('./routes/contact.routes');
 const reviewRoutes = require('./routes/review.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const healthRoutes = require('./routes/health.routes');
-const orderRoutes = require('./routes/order.routes'); 
+const orderRoutes = require('./routes/order.routes');
 
-// ========== CONFIGURACIÓN DE CLOUDINARY ==========
 const { testCloudinaryConnection } = require('./config/cloudinary');
 
 const app = express();
@@ -25,7 +36,6 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200
 };
-
 app.use(cors(corsOptions));
 
 // ========== MIDDLEWARES ==========
@@ -50,7 +60,7 @@ app.use('/api/orders', orderRoutes);
 
 // Ruta raíz
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'API de E-commerce funcionando',
     version: '1.0.0'
   });
@@ -65,16 +75,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ========== 🔹 CORRECCIÓN APLICADA AQUÍ 🔹 ==========
 // Ruta no encontrada (debe ir al final)
 app.all('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     success: false,
     message: 'Ruta no encontrada',
     path: req.originalUrl
   });
 });
-// =======================================================
 
 // ========== CONEXIÓN A LA BASE DE DATOS E INICIO DEL SERVIDOR ==========
 const PORT = process.env.PORT || 5000;
