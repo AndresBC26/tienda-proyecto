@@ -36,7 +36,7 @@ router.get('/me', auth, async (req, res) => {
 
 
 // ========================================================================
-// =====      ✅ INICIO DE LA MEJORA: REGISTRO CON ENVÍO SEGURO      =====
+// =====      REGISTRO CON ENVÍO SEGURO                             =====
 // ========================================================================
 router.post('/register', async (req, res) => {
     try {
@@ -69,22 +69,64 @@ router.post('/register', async (req, res) => {
       </div>
     `;
 
-        // --- ✅ CORRECCIÓN APLICADA ---
-        // Se añade 'await' para asegurar que el servidor espere a que el correo se envíe.
-        // Si hay un error en el envío (ej. credenciales incorrectas), se capturará en el bloque 'catch'.
         await sendEmail({ to: newUser.email, subject: 'Verificación de cuenta - Elegancia Urban', html: emailHtml });
 
         res.status(201).json({ message: '¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.' });
 
     } catch (err) {
-        // Este bloque 'catch' ahora también manejará errores del envío de correo.
         console.error("Error en registro o envío de correo:", err);
-        // Se devuelve un error 500 para indicar un fallo del servidor.
         res.status(500).json({ message: 'Se creó la cuenta, pero falló el envío del correo de verificación. Revisa la configuración del servidor de correo.' });
     }
 });
+
 // ========================================================================
-// =====       FIN DE LA MEJORA: LÓGICA DE GOOGLE REFORZADA          =====
+// =====          ✅ INICIO DE LA RUTA LOGIN (AÑADIDA)                 =====
+// ========================================================================
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // 1. Buscar al usuario por su correo electrónico
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
+        }
+
+        // 2. Comparar la contraseña ingresada con la guardada en la base de datos
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
+        }
+
+        // 3. Si todo es correcto, crear un token JWT
+        const payload = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            googleId: user.googleId
+        };
+
+        const token = jwt.sign(
+            payload,
+            process.env.JWT_SECRET || 'your_jwt_secret',
+            { expiresIn: '7d' }
+        );
+
+        // 4. Enviar el token y los datos del usuario al frontend
+        res.json({
+            message: 'Inicio de sesión exitoso',
+            token,
+            user: payload,
+        });
+
+    } catch (err) {
+        console.error("Error en login:", err);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+// ========================================================================
+// =====           FIN DE LA RUTA LOGIN (AÑADIDA)                   =====
 // ========================================================================
 
 
@@ -142,13 +184,12 @@ router.post('/forgot-password', async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
-            // Se envía una respuesta genérica por seguridad para no revelar si un email existe o no.
             return res.status(200).json({ message: 'Si tu correo está registrado, recibirás un enlace.' });
         }
 
         const resetToken = crypto.randomBytes(20).toString('hex');
         user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutos de validez
+        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
         await user.save({ validateBeforeSave: false });
 
         const resetUrl = `${process.env.FRONTEND_URL}/#/reset-password/${resetToken}`;
