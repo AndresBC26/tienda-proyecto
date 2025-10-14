@@ -1,34 +1,35 @@
-const nodemailer = require('nodemailer');
+// utils/sendEmail.js
+const sgMail = require('@sendgrid/mail');
+
+// Se configura la API key al inicio
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendEmail = async (options) => {
-  // 1. Crear el transporter con la configuración mejorada
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    // Se asegura de que 'secure' sea true solo si el puerto es 465
-    secure: process.env.EMAIL_PORT == 465,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    // ✅ MEJORA AÑADIDA: Opción de compatibilidad TLS
-    // Esto soluciona problemas comunes de certificados en entornos locales.
-    tls: {
-        rejectUnauthorized: false
-    }
-  });
-
-  // 2. Definir las opciones del correo (sin cambios)
-  const mailOptions = {
-    from: `"Elegancia Urban" <${process.env.EMAIL_USER}>`,
+  // 1. Definir el mensaje
+  const msg = {
     to: options.to,
+    // Usamos el correo verificado en SendGrid como remitente
+    from: {
+        name: 'Elegancia Urban',
+        email: process.env.SENDGRID_FROM_EMAIL
+    },
     subject: options.subject,
     html: options.html,
   };
 
-  // 3. Enviar el correo
-  await transporter.sendMail(mailOptions);
-  console.log('Correo de verificación enviado exitosamente a:', options.to);
+  try {
+    // 2. Enviar el correo usando la API de SendGrid
+    await sgMail.send(msg);
+    console.log(`✅ Correo enviado a ${options.to} a través de SendGrid.`);
+  } catch (error) {
+    console.error('❌ Error al enviar correo con SendGrid:', error);
+    
+    if (error.response) {
+      console.error(error.response.body)
+    }
+    // Lanzamos el error para que sea capturado por el bloque catch en user.routes.js
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
