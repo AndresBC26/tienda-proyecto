@@ -75,14 +75,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Ruta no encontrada (debe ir al final)
-app.all('*', (req, res) => {
+
+// Middleware para manejar rutas no encontradas (404). Debe ir al final.
+app.use((req, res, next) => {
   res.status(404).json({
     success: false,
-    message: 'Ruta no encontrada',
+    message: 'Ruta no encontrada en el servidor',
     path: req.originalUrl
   });
 });
+
 
 // ========== CONEXIÓN A LA BASE DE DATOS E INICIO DEL SERVIDOR ==========
 const PORT = process.env.PORT || 5000;
