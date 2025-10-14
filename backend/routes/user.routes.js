@@ -26,125 +26,58 @@ const auth = (req, res, next) => {
 
 // --- RUTA PARA OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
 router.get('/', auth, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
-  }
-  try {
-    const users = await User.find({}).select('-password -__v');
-    res.json(users);
-  } catch (err) {
-    console.error("Error al obtener usuarios:", err);
-    res.status(500).json({ message: 'Error del servidor al obtener usuarios.' });
-  }
+    // ... (Tu código existente aquí - sin cambios)
 });
 
-// --- RUTA PARA VERIFICAR SESIÓN (SOLUCIONA EL REFRESCAR PÁGINA) ---
+// --- RUTA PARA VERIFICAR SESIÓN ---
 router.get('/me', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password -__v');
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
-    res.json(user);
-  } catch (err) {
-    console.error("Error en la ruta /me:", err);
-    res.status(500).send('Error del servidor');
-  }
+    // ... (Tu código existente aquí - sin cambios)
 });
 
-// --- RUTA DE REGISTRO ---
+// ========================================================================
+// =====      ✅ INICIO DE LA MEJORA: REGISTRO NO BLOQUEANTE           =====
+// ========================================================================
 router.post('/register', async (req, res) => {
-    // ... Tu código de registro se mantiene exactamente igual ...
-});
-
-// --- RUTA DE VERIFICACIÓN DE EMAIL ---
-router.get('/verify-email/:token', async (req, res) => {
-    // ... Tu código de verificación de email se mantiene exactamente igual ...
-});
-
-// --- RUTA DE LOGIN ---
-router.post('/login', async (req, res) => {
-    // ... Tu código de login se mantiene exactamente igual ...
-});
-
-
-// ========================================================================
-// =====      ✅ INICIO DE LA MEJORA: LÓGICA DE GOOGLE REFORZADA       =====
-// ========================================================================
-router.post('/google-login', async (req, res) => {
-  const { token, intent } = req.body;
-
-  if (!intent || !['login', 'register'].includes(intent)) {
-    return res.status(400).json({ message: 'Intento no especificado (debe ser login o register).' });
-  }
-
   try {
-    const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
+    const { name, email, password, wantsEmails, acceptedTerms } = req.body;
+    if (await User.findOne({ email })) {
+      return res.status(400).json({ message: 'El correo electrónico ya está registrado' });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
+    
+    const newUser = new User({
+      name, email, password: hashedPassword,
+      wantsEmails, acceptedTerms, role: userRole,
+      verificationToken,
+      isVerified: false
     });
-    const { sub: googleId, name, email } = ticket.getPayload();
-
-    // --- LÓGICA MEJORADA ---
-    // 1. Busca primero por Google ID. Es la forma más segura de encontrar al usuario.
-    let user = await User.findOne({ googleId });
-
-    // 2. Si no lo encuentra por Google ID, busca por email.
-    if (!user) {
-      user = await User.findOne({ email });
-    }
-
-    // --- LÓGICA PARA EL INTENTO DE REGISTRO ---
-    if (intent === 'register') {
-      if (user) {
-        return res.status(409).json({ message: 'Este correo ya está registrado. Por favor, inicia sesión.' });
-      }
-      // Si no existe, crea un nuevo usuario ya vinculado a Google.
-      const newUser = new User({
-        name,
-        email,
-        googleId, // Se guarda el ID de Google desde el registro
-        isVerified: true,
-        acceptedTerms: true,
-        role: email === 'admin@tienda.com' ? 'admin' : 'user'
-      });
-      await newUser.save();
-      user = newUser; // Asignamos el nuevo usuario para el proceso de login
     
-    // --- LÓGICA PARA EL INTENTO DE LOGIN ---
-    } else if (intent === 'login') {
-      if (user) {
-        // Si el usuario existe (por email) pero no tiene googleId, lo vinculamos automáticamente.
-        if (!user.googleId) {
-          user.googleId = googleId;
-          await user.save();
-          console.log(`🔄 Cuenta de Google vinculada automáticamente al email: ${email}`);
-        }
-      } else {
-        // Auto-registro si el usuario no existe en absoluto
-        console.log(`✨ Auto-registrando nuevo usuario con Google: ${email}`);
-        const newUser = new User({
-          name,
-          email,
-          googleId,
-          isVerified: true,
-          acceptedTerms: true,
-          role: email === 'admin@tienda.com' ? 'admin' : 'user'
-        });
-        await newUser.save();
-        user = newUser;
-      }
-    }
-
-    // --- PROCESO FINAL DE LOGIN (COMÚN PARA AMBOS INTENTOS) ---
-    const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+    await newUser.save();
     
-    return res.json({ token: jwtToken, user: payload });
+    const verificationUrl = `${process.env.FRONTEND_URL}/#/verify-email/${verificationToken}`;
+    
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 12px; max-width: 600px; margin: auto; background-color: #f9f9f9;">
+        <h1 style="color: #60caba;">¡Bienvenido a Elegancia Urban!</h1>
+        <p style="font-size: 16px;">Gracias por registrarte. Por favor, haz clic en el botón para verificar tu cuenta:</p>
+        <a href="${verificationUrl}" style="background: linear-gradient(to right, #60caba, #FFD700); color: #000; padding: 15px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block; margin: 20px 0;">Verificar mi Cuenta</a>
+        <p style="font-size: 12px; color: #888;">Si el botón no funciona, copia y pega este enlace: ${verificationUrl}</p>
+      </div>
+    `;
 
-  } catch (error) {
-    console.error("Error en google-login:", error);
-    res.status(400).json({ message: 'La autenticación con Google falló.' });
+    // --- MEJORA APLICADA ---
+    // Se elimina el 'await' para que el envío del correo no bloquee la respuesta.
+    // El usuario se crea y recibe una respuesta inmediata, mientras el correo se envía en segundo plano.
+    sendEmail({ to: newUser.email, subject: 'Verificación de cuenta - Elegancia Urban', html: emailHtml });
+
+    res.status(201).json({ message: '¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.' });
+
+  } catch (err) {
+    console.error("Error en registro:", err);
+    res.status(400).json({ message: 'Ocurrió un error durante el registro.' });
   }
 });
 // ========================================================================
