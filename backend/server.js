@@ -38,6 +38,21 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// ========================================================================
+// =====      ✅ INICIO DE LA CORRECCIÓN: MIDDLEWARE DE SEGURIDAD       =====
+// ========================================================================
+// Este middleware establece las cabeceras necesarias para permitir que el
+// popup de Google Sign-In se comunique con tu aplicación principal.
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  next();
+});
+// ========================================================================
+// =====       FIN DE LA CORRECCIÓN: MIDDLEWARE DE SEGURIDAD          =====
+// ========================================================================
+
+
 // ========== MIDDLEWARES ==========
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
