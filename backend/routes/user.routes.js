@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const User = require('../models/User'); 
+const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const { OAuth2Client } = require('google-auth-library');
 
@@ -11,17 +11,17 @@ const client = new OAuth2Client('714367295627-vpeoa81drg97voneiii9drddnnk523ge.a
 
 // Middleware de autenticación (sin cambios)
 const auth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) { 
-    return res.status(401).json({ message: 'No hay token, autorización denegada' }); 
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
-    req.user = decoded;
-    next();
-  } catch (e) {
-    res.status(401).json({ message: 'Token no válido' });
-  }
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No hay token, autorización denegada' });
+    }
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+        req.user = decoded;
+        next();
+    } catch (e) {
+        res.status(401).json({ message: 'Token no válido' });
+    }
 };
 
 // --- RUTA PARA OBTENER TODOS LOS USUARIOS (SOLO ADMIN) ---
@@ -34,32 +34,33 @@ router.get('/me', auth, async (req, res) => {
     // ... (Tu código existente aquí - sin cambios)
 });
 
+
 // ========================================================================
-// =====      ✅ INICIO DE LA MEJORA: REGISTRO NO BLOQUEANTE           =====
+// =====      ✅ INICIO DE LA MEJORA: REGISTRO CON ENVÍO SEGURO      =====
 // ========================================================================
 router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, wantsEmails, acceptedTerms } = req.body;
-    if (await User.findOne({ email })) {
-      return res.status(400).json({ message: 'El correo electrónico ya está registrado' });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
-    
-    const newUser = new User({
-      name, email, password: hashedPassword,
-      wantsEmails, acceptedTerms, role: userRole,
-      verificationToken,
-      isVerified: false
-    });
-    
-    await newUser.save();
-    
-    const verificationUrl = `${process.env.FRONTEND_URL}/#/verify-email/${verificationToken}`;
-    
-    const emailHtml = `
+    try {
+        const { name, email, password, wantsEmails, acceptedTerms } = req.body;
+        if (await User.findOne({ email })) {
+            return res.status(400).json({ message: 'El correo electrónico ya está registrado' });
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
+
+        const newUser = new User({
+            name, email, password: hashedPassword,
+            wantsEmails, acceptedTerms, role: userRole,
+            verificationToken,
+            isVerified: false
+        });
+
+        await newUser.save();
+
+        const verificationUrl = `${process.env.FRONTEND_URL}/#/verify-email/${verificationToken}`;
+
+        const emailHtml = `
       <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 12px; max-width: 600px; margin: auto; background-color: #f9f9f9;">
         <h1 style="color: #60caba;">¡Bienvenido a Elegancia Urban!</h1>
         <p style="font-size: 16px;">Gracias por registrarte. Por favor, haz clic en el botón para verificar tu cuenta:</p>
@@ -68,17 +69,19 @@ router.post('/register', async (req, res) => {
       </div>
     `;
 
-    // --- MEJORA APLICADA ---
-    // Se elimina el 'await' para que el envío del correo no bloquee la respuesta.
-    // El usuario se crea y recibe una respuesta inmediata, mientras el correo se envía en segundo plano.
-    sendEmail({ to: newUser.email, subject: 'Verificación de cuenta - Elegancia Urban', html: emailHtml });
+        // --- ✅ CORRECCIÓN APLICADA ---
+        // Se añade 'await' para asegurar que el servidor espere a que el correo se envíe.
+        // Si hay un error en el envío (ej. credenciales incorrectas), se capturará en el bloque 'catch'.
+        await sendEmail({ to: newUser.email, subject: 'Verificación de cuenta - Elegancia Urban', html: emailHtml });
 
-    res.status(201).json({ message: '¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.' });
+        res.status(201).json({ message: '¡Registro exitoso! Por favor, revisa tu correo para verificar tu cuenta.' });
 
-  } catch (err) {
-    console.error("Error en registro:", err);
-    res.status(400).json({ message: 'Ocurrió un error durante el registro.' });
-  }
+    } catch (err) {
+        // Este bloque 'catch' ahora también manejará errores del envío de correo.
+        console.error("Error en registro o envío de correo:", err);
+        // Se devuelve un error 500 para indicar un fallo del servidor.
+        res.status(500).json({ message: 'Se creó la cuenta, pero falló el envío del correo de verificación. Revisa la configuración del servidor de correo.' });
+    }
 });
 // ========================================================================
 // =====       FIN DE LA MEJORA: LÓGICA DE GOOGLE REFORZADA          =====
@@ -89,46 +92,46 @@ router.post('/register', async (req, res) => {
 // --- ✨ NUEVA RUTA: VINCULAR CUENTA DE GOOGLE (YA LOGUEADO) ---
 // =================================================================
 router.post('/link-google', auth, async (req, res) => {
-  const { token } = req.body;
-  const userId = req.user.id;
+    const { token } = req.body;
+    const userId = req.user.id;
 
-  if (!token) {
-    return res.status(400).json({ message: 'No se proporcionó el token de Google.' });
-  }
-
-  try {
-    const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
-    });
-    const { sub: googleId } = ticket.getPayload();
-
-    const existingGoogleUser = await User.findOne({ googleId });
-    if (existingGoogleUser && existingGoogleUser._id.toString() !== userId) {
-      return res.status(409).json({ message: 'Esta cuenta de Google ya está vinculada a otro usuario.' });
+    if (!token) {
+        return res.status(400).json({ message: 'No se proporcionó el token de Google.' });
     }
 
-    const currentUser = await User.findById(userId);
-    if (!currentUser) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: '714367295627-vpeoa81drg97voneiii9drddnnk523ge.apps.googleusercontent.com',
+        });
+        const { sub: googleId } = ticket.getPayload();
+
+        const existingGoogleUser = await User.findOne({ googleId });
+        if (existingGoogleUser && existingGoogleUser._id.toString() !== userId) {
+            return res.status(409).json({ message: 'Esta cuenta de Google ya está vinculada a otro usuario.' });
+        }
+
+        const currentUser = await User.findById(userId);
+        if (!currentUser) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+
+        currentUser.googleId = googleId;
+        await currentUser.save();
+
+        const payload = { id: currentUser._id, name: currentUser.name, email: currentUser.email, role: currentUser.role };
+        const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+
+        res.json({
+            message: '¡Cuenta de Google vinculada exitosamente!',
+            user: { ...payload, googleId: currentUser.googleId }, // Devolvemos el googleId en el user
+            token: jwtToken
+        });
+
+    } catch (error) {
+        console.error("Error al vincular cuenta de Google:", error);
+        res.status(400).json({ message: 'La autenticación con Google falló durante la vinculación.' });
     }
-
-    currentUser.googleId = googleId;
-    await currentUser.save();
-
-    const payload = { id: currentUser._id, name: currentUser.name, email: currentUser.email, role: currentUser.role };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
-
-    res.json({
-      message: '¡Cuenta de Google vinculada exitosamente!',
-      user: { ...payload, googleId: currentUser.googleId }, // Devolvemos el googleId en el user
-      token: jwtToken
-    });
-
-  } catch (error) {
-    console.error("Error al vincular cuenta de Google:", error);
-    res.status(400).json({ message: 'La autenticación con Google falló durante la vinculación.' });
-  }
 });
 // ====================================================================
 
@@ -139,16 +142,17 @@ router.post('/forgot-password', async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (!user) {
+            // Se envía una respuesta genérica por seguridad para no revelar si un email existe o no.
             return res.status(200).json({ message: 'Si tu correo está registrado, recibirás un enlace.' });
         }
 
         const resetToken = crypto.randomBytes(20).toString('hex');
         user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutos de validez
         await user.save({ validateBeforeSave: false });
 
         const resetUrl = `${process.env.FRONTEND_URL}/#/reset-password/${resetToken}`;
-        
+
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px; border: 1px solid #ddd; border-radius: 12px; max-width: 600px; margin: auto; background-color: #f9f9f9;">
             <h1 style="color: #60caba;">Solicitud de Reseteo de Contraseña</h1>
@@ -190,64 +194,64 @@ router.put('/reset-password/:token', async (req, res) => {
 
 // --- ACTUALIZAR PERFIL ---
 router.put('/:id', auth, async (req, res) => {
-  try {
-    const { name, email } = req.body;
-    const userIdToUpdate = req.params.id;
+    try {
+        const { name, email } = req.body;
+        const userIdToUpdate = req.params.id;
 
-    const isOwner = req.user.id === userIdToUpdate;
-    const isAdmin = req.user.role === 'admin';
+        const isOwner = req.user.id === userIdToUpdate;
+        const isAdmin = req.user.role === 'admin';
 
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({ message: 'No tienes permiso para actualizar este perfil.' });
-    }
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: 'No tienes permiso para actualizar este perfil.' });
+        }
 
-    const user = await User.findById(userIdToUpdate);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+        const user = await User.findById(userIdToUpdate);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        if (email && email !== user.email) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser && existingUser._id.toString() !== userIdToUpdate) {
+                return res.status(400).json({ message: 'El correo electrónico ya está en uso.' });
+            }
+            user.email = email;
+        }
+        if (name) {
+            user.name = name;
+        }
+        const updatedUser = await user.save();
+        const payload = { id: updatedUser._id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role };
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
+        res.json({
+            message: 'Perfil actualizado exitosamente',
+            user: payload,
+            token: token
+        });
+    } catch (err) {
+        console.error("Error al actualizar perfil:", err);
+        res.status(500).json({ message: 'Error del servidor al actualizar el perfil.' });
     }
-    if (email && email !== user.email) {
-      const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser._id.toString() !== userIdToUpdate) {
-        return res.status(400).json({ message: 'El correo electrónico ya está en uso.' });
-      }
-      user.email = email;
-    }
-    if (name) {
-      user.name = name;
-    }
-    const updatedUser = await user.save();
-    const payload = { id: updatedUser._id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '7d' });
-    res.json({
-        message: 'Perfil actualizado exitosamente',
-        user: payload,
-        token: token 
-    });
-  } catch (err) {
-    console.error("Error al actualizar perfil:", err);
-    res.status(500).json({ message: 'Error del servidor al actualizar el perfil.' });
-  }
 });
 
 // --- ELIMINAR USUARIO ---
 router.delete('/:id', auth, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
+        }
+        const userToDelete = await User.findById(req.params.id);
+        if (!userToDelete) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        if (userToDelete._id.toString() === req.user.id) {
+            return res.status(400).json({ message: 'No puedes eliminar tu propia cuenta de administrador.' });
+        }
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Usuario eliminado correctamente' });
+    } catch (err) {
+        console.error("Error al eliminar usuario:", err);
+        res.status(500).json({ message: 'Error del servidor al eliminar el usuario.' });
     }
-    const userToDelete = await User.findById(req.params.id);
-    if (!userToDelete) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-    if (userToDelete._id.toString() === req.user.id) {
-        return res.status(400).json({ message: 'No puedes eliminar tu propia cuenta de administrador.' });
-    }
-    await User.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Usuario eliminado correctamente' });
-  } catch (err) {
-    console.error("Error al eliminar usuario:", err);
-    res.status(500).json({ message: 'Error del servidor al eliminar el usuario.' });
-  }
 });
 
 // --- RUTAS DE FAVORITOS ---
