@@ -2,18 +2,12 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+// 🔹 CORRECCIÓN 1: Importar la librería 'cors' correctamente
 const cors = require('cors');
 
 // ===============================================================
 // 1. CONFIGURACIÓN DE SERVICIOS EXTERNOS (Cloudinary)
 // ===============================================================
-const cloudinary = require('cloudinary').v2;
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true
-});
 const { testCloudinaryConnection } = require('./config/cloudinary');
 
 // ===============================================================
@@ -34,18 +28,33 @@ const app = express();
 // 3. CONFIGURACIÓN DE MIDDLEWARES
 // ===============================================================
 
-// --- CORS ---
+// ========== CONFIGURACIÓN DE CORS ==========
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // Tu dominio de producción
+  'http://localhost:3000',     // Para desarrollo local
+  'https://eleganciaurban.shop' // Añadido explícitamente para seguridad
+];
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
+
+// 🔹 CORRECCIÓN 2: Aplicar la configuración de CORS a la app
 app.use(cors(corsOptions));
 
 // --- Cabeceras de Seguridad (Solución para Google Login) ---
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  // Esta cabecera puede ser restrictiva, si tienes problemas coméntala.
+  // res.setHeader("Cross-Origin-Embedder-Policy", "require-corp"); 
   next();
 });
 
