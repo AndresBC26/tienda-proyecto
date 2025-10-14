@@ -15,6 +15,10 @@ type Size = Variant['sizes'][0];
 
 type ImageSource = { type: 'url', value: string } | { type: 'file', value: File, preview: string };
 
+// ✅ MEJORA 1: Define los formatos de imagen permitidos en un solo lugar.
+const ALLOWED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+const ALLOWED_IMAGE_EXTENSIONS = 'image/jpeg, image/png, image/webp, image/gif, image/avif';
+
 const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
   const { notify } = useNotification();
   
@@ -27,6 +31,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // ✅ MEJORA 2: Estado para feedback visual de drag & drop
   
   const dragImage = useRef<number | null>(null);
   const dragOverImage = useRef<number | null>(null);
@@ -48,7 +53,20 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     }
   }, [editingProduct]);
 
-  // --- MANEJADORES BÁSICOS ---
+  // ✅ MEJORA 3: Limpieza de URLs de previsualización para optimizar memoria.
+  useEffect(() => {
+    return () => {
+      formData.variants.forEach(variant => {
+        variant.images.forEach(image => {
+          if (image.type === 'file') {
+            URL.revokeObjectURL(image.preview);
+          }
+        });
+      });
+    };
+  }, [formData.variants]);
+
+  // --- MANEJADORES BÁSICOS (Sin cambios, ya estaban bien) ---
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: name === 'price' ? parseFloat(value) || 0 : value }));
@@ -80,7 +98,16 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
 
   // --- MANEJADORES DE IMÁGENES ---
   const handleImageFilesChange = (variantIndex: number, files: FileList) => {
-    const newImageFiles = Array.from(files).map(file => ({
+    // ✅ MEJORA 4: Validar el tipo de archivo en el frontend.
+    const validFiles = Array.from(files).filter(file => {
+      if (!ALLOWED_IMAGE_FORMATS.includes(file.type)) {
+        notify(`El formato de archivo '${file.type}' no es válido.`, 'error');
+        return false;
+      }
+      return true;
+    });
+
+    const newImageFiles = validFiles.map(file => ({
       type: 'file' as 'file',
       value: file,
       preview: URL.createObjectURL(file)
@@ -110,12 +137,33 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
     dragOverImage.current = null;
     
     setFormData(prev => ({ ...prev, variants: newVariants }));
+    setIsDragging(false); // Desactivar el estado visual
   };
 
   // --- ENVÍO DEL FORMULARIO ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // ✅ MEJORA 5: Validaciones robustas antes de enviar.
+    if (formData.variants.length === 0) {
+      notify('Debes agregar al menos una variante de color.', 'error');
+      setLoading(false);
+      return;
+    }
+
+    for (const variant of formData.variants) {
+      if (variant.images.length === 0) {
+        notify(`La variante "${variant.colorName || 'sin nombre'}" debe tener al menos una imagen.`, 'error');
+        setLoading(false);
+        return;
+      }
+      if (variant.sizes.length === 0) {
+        notify(`La variante "${variant.colorName || 'sin nombre'}" debe tener al menos una talla.`, 'error');
+        setLoading(false);
+        return;
+      }
+    }
 
     const data = new FormData();
     data.append('name', formData.name);
@@ -171,7 +219,7 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
         {/* Información Básica */}
         <div className="bg-black/20 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 p-6">
           <h2 className="text-xl font-bold text-gray-100 mb-6 flex items-center gap-3">
-            <svg className="w-6 h-6 text-[#60caba]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <svg className="w-6 h-6 text-[#60caba]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9-0-11-18 0 9 9 0 0118 0z"></path></svg>
             Información Básica
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -225,13 +273,13 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
                     {/* SECCIÓN DE IMÁGENES CON DRAG & DROP */}
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Imágenes de la Variante (Arrastra para reordenar)</label>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-3">
+                        <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-3 p-2 rounded-lg ${isDragging ? 'bg-white/10' : ''}`}>
                           {variant.images.map((img, imgIndex) => (
                             <div 
                                 key={imgIndex} 
                                 className="relative group aspect-square cursor-grab"
                                 draggable
-                                onDragStart={() => (dragImage.current = imgIndex)}
+                                onDragStart={() => { dragImage.current = imgIndex; setIsDragging(true); }}
                                 onDragEnter={() => (dragOverImage.current = imgIndex)}
                                 onDragEnd={() => handleSortImages(variantIndex)}
                                 onDragOver={(e) => e.preventDefault()}
@@ -241,8 +289,13 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
                             </div>
                           ))}
                         </div>
-                        <input type="file" multiple onChange={(e) => e.target.files && handleImageFilesChange(variantIndex, e.target.files)} accept="image/*" 
-                               className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-white/10 file:text-gray-200 hover:file:bg-white/20" />
+                        <input 
+                            type="file" 
+                            multiple 
+                            onChange={(e) => e.target.files && handleImageFilesChange(variantIndex, e.target.files)} 
+                            accept={ALLOWED_IMAGE_EXTENSIONS} // ✅ MEJORA 6: Limitar los archivos que se pueden seleccionar
+                            className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-white/10 file:text-gray-200 hover:file:bg-white/20" 
+                        />
                     </div>
                     
                     {/* Tallas y Stock */}
@@ -270,7 +323,8 @@ const AddProductForm: React.FC<Props> = ({ editingProduct, onSuccess }) => {
         <button type="button" onClick={addVariant} className="w-full py-4 border-2 border-dashed border-[#60caba]/50 rounded-2xl text-[#60caba]">Agregar Variante de Color</button>
 
         <div className="flex justify-center pt-4">
-          <button type="submit" disabled={loading} className="w-full max-w-xs justify-center flex items-center gap-3 py-4 px-4 rounded-2xl text-lg font-medium text-black bg-gradient-to-r from-[#60caba] to-[#FFD700]">
+          <button type="submit" disabled={loading} className="w-full max-w-xs justify-center flex items-center gap-3 py-4 px-4 rounded-2xl text-lg font-medium text-black bg-gradient-to-r from-[#60caba] to-[#FFD700] disabled:opacity-50 disabled:cursor-not-allowed">
+            {loading && <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>}
             {loading ? 'Guardando...' : editingProduct ? 'Guardar Cambios' : 'Guardar Producto'}
           </button>
         </div>
