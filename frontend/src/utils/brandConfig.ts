@@ -15,9 +15,9 @@ export const brandConfig = {
 
   // INFORMACIÓN DE CONTACTO
   contact: {
-    email: 'soporte@eleganciaurban.com', // Email de la tienda
-    phone: '+57 (321) 123-4567', // Teléfono de la tienda
-    whatsapp: '+573211234567', // WhatsApp sin espacios ni símbolos
+    email: 'eleganciaurban7@gmil.com', // Email de la tienda
+    phone: '+57 (302) 630-2021', // Teléfono de la tienda
+    whatsapp: '+573203664711', // WhatsApp sin espacios ni símbolos
     address: {
       street: 'Avenida Siempre Viva #12-34',
       city: 'Bogotá D.C.',
@@ -28,10 +28,9 @@ export const brandConfig = {
 
   // REDES SOCIALES (con placeholders)
   social: {
-    facebook: 'https://facebook.com/eleganciaurban',
-    instagram: 'https://instagram.com/eleganciaurban',
-    twitter: 'https://twitter.com/eleganciaurban',
-    linkedin: 'https://linkedin.com/company/eleganciaurban',
+    facebook: 'https://www.facebook.com/andresborreroc',
+    instagram: 'https://www.instagram.com/andresborreroc/',
+    tiktok: 'https://www.tiktok.com/@_andresborreroc_',
   },
 
   // INFORMACIÓN EMPRESARIAL

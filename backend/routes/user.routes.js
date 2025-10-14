@@ -1,3 +1,15 @@
+¡Claro! Entiendo perfectamente. El error de compilación que te aparece es porque la información del usuario en el frontend (por seguridad) no incluye el campo password. Para solucionarlo correctamente, necesitamos ajustar tanto el backend como el frontend.
+
+Aquí tienes el paso a paso y los bloques de código completos y corregidos para que tu aplicación funcione como esperas.
+
+Paso 1: Actualizar el Backend (routes/user.routes.js)
+Vamos a indicarle al frontend si un usuario tiene una contraseña guardada o no.
+
+Acción: Reemplaza el contenido de tu archivo routes/user.routes.js con este código. Se ha añadido un campo hasPassword al objeto de usuario que se envía al frontend.
+
+JavaScript
+
+// routes/user.routes.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -46,7 +58,7 @@ router.get('/me', auth, async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
         
-        // CRÍTICO: Devolver el googleId para que el frontend sepa si está vinculado
+        // ✅ MEJORA: AÑADIMOS hasPassword
         res.json({
             _id: user._id,
             name: user.name,
@@ -54,7 +66,8 @@ router.get('/me', auth, async (req, res) => {
             role: user.role,
             googleId: user.googleId || null,
             isVerified: user.isVerified,
-            wantsEmails: user.wantsEmails
+            wantsEmails: user.wantsEmails,
+            hasPassword: !!user.password // Devuelve true si el campo password existe y no es nulo
         });
     } catch (err) {
         console.error("Error en /me:", err);
@@ -119,13 +132,14 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Correo electrónico o contraseña incorrectos.' });
         }
 
-        // CRÍTICO: Incluir googleId en el payload del token
+        // ✅ MEJORA: AÑADIMOS hasPassword
         const payload = {
             id: user._id,
             name: user.name,
             email: user.email,
             role: user.role,
-            googleId: user.googleId || null
+            googleId: user.googleId || null,
+            hasPassword: !!user.password
         };
 
         const token = jwt.sign(
@@ -164,22 +178,18 @@ router.post('/google-login', async (req, res) => {
         let user = await User.findOne({ email });
 
         if (user) {
-            // Usuario existe: actualizar googleId si no lo tiene
             if (!user.googleId) {
                 user.googleId = googleId;
                 await user.save();
             }
         } else {
-            // Usuario nuevo: crear cuenta con Google
-            const password = email + process.env.JWT_SECRET;
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
+            // Un usuario que se registra con Google no tendrá contraseña local
             const userRole = email === 'admin@tienda.com' ? 'admin' : 'user';
 
             user = new User({
                 name,
                 email,
-                password: hashedPassword,
+                password: null, // explícitamente nulo
                 googleId,
                 isVerified: true,
                 acceptedTerms: true,
@@ -187,6 +197,35 @@ router.post('/google-login', async (req, res) => {
             });
             await user.save();
         }
+
+        // ✅ MEJORA: AÑADIMOS hasPassword
+        const payload = { 
+            id: user._id, 
+            name: user.name, 
+            email: user.email, 
+            role: user.role,
+            googleId: user.googleId,
+            hasPassword: !!user.password
+        };
+        
+        const jwtToken = jwt.sign(
+            payload,
+            process.env.JWT_SECRET || 'your_jwt_secret',
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            message: 'Autenticación con Google exitosa',
+            token: jwtToken,
+            user: payload
+        });
+
+    } catch (error) {
+        console.error("Error en google-login:", error);
+        res.status(400).json({ message: 'La autenticación con Google falló.' });
+    }
+});
+
 
         // CRÍTICO: Incluir googleId en el payload del token
         const payload = { 
@@ -491,6 +530,46 @@ router.put('/:userId/cart', auth, async (req, res) => {
         res.status(200).json({ message: 'Carrito actualizado con éxito' });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+// --- CAMBIO DE CONTRASEÑA (USUARIO LOGUEADO) ---
+router.put('/change-password', auth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado.' });
+        }
+
+        // Verificar que el usuario no esté usando login de Google
+        if (user.googleId && !user.password) {
+            return res.status(400).json({ message: 'No puedes cambiar la contraseña de una cuenta registrada con Google.' });
+        }
+        
+        // Comparar la contraseña actual
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'La contraseña actual es incorrecta.' });
+        }
+
+        // Validar nueva contraseña
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+        }
+
+        // Hashear y guardar la nueva contraseña
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.status(200).json({ message: '¡Contraseña actualizada con éxito!' });
+
+    } catch (err) {
+        console.error("Error en change-password:", err);
+        res.status(500).json({ message: 'Error del servidor al cambiar la contraseña.' });
     }
 });
 

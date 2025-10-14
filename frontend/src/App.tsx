@@ -9,8 +9,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/layout/Layout';
 import ScrollToTop from './components/common/ScrollToTop';
-
-// (El resto de tus imports no cambian)
+import MyOrdersPage from './pages/MyOrdersPage';
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetailPage from './pages/ProductDetailPage';
@@ -39,6 +38,9 @@ import Reviews from './pages/admin/Reviews';
 import Messages from './pages/admin/Messages';
 import PrivateRoute from './components/auth/PrivateRoute';
 import UserPrivateRoute from './components/auth/UserPrivateRoute';
+import ChangePasswordPage from './pages/ChangePasswordPage';
+
+
 
 const NotFoundPage: React.FC = () => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -77,6 +79,8 @@ const AppContent: React.FC = () => {
       
       <Route element={<UserPrivateRoute />}>
         <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+        <Route path="/my-orders" element={<Layout><MyOrdersPage /></Layout>} />
+        <Route path="/change-password" element={<Layout><ChangePasswordPage /></Layout>} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/payment-success" element={<PaymentSuccessPage />} />
         <Route path="/payment-failure" element={<PaymentFailurePage />} />

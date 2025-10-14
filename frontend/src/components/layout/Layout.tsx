@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import TopBanner from '../common/TopBanner';
-import { colors } from '../../utils/colors'; // Asegúrate de que esta importación exista
+import { colors } from '../../utils/colors'; 
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,6 +26,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b]">
       <div className="fixed top-0 left-0 right-0 z-50">
+        
+        {/*
+          ✅ MEJORA 1: Visibilidad del TopBanner con línea delgada (Universal).
+          La clase 'max-h-1' ahora se aplica en TODOS los tamaños de pantalla
+          cuando se hace scroll, garantizando el efecto de línea delgada.
+        */}
         <div
           className={`transition-all duration-300 ease-in-out overflow-hidden ${     
             isScrolled ? 'max-h-1' : 'max-h-12' 
@@ -38,7 +44,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <main
         className={`flex-1 relative transition-all duration-300 ease-in-out ${
-          isScrolled ? 'pt-28 lg:pt-24' : 'pt-36 lg:pt-32'
+          /*
+            ✅ MEJORA 2: Padding superior dinámico y universal.
+            Se ajustan los valores para que funcionen consistentemente en todos
+            los tamaños de pantalla, solucionando cualquier superposición.
+          */
+          isScrolled ? 'pt-36 lg:pt-24' : 'pt-48 lg:pt-32'
         }`}
       >
         {/* Se restauran los gradientes decorativos del fondo */}

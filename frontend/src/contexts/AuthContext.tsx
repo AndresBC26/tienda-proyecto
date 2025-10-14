@@ -8,6 +8,7 @@ interface UserData {
   email: string;
   role: 'user' | 'admin';
   googleId?: string; 
+  hasPassword?: boolean;
 }
 
 interface AuthState {
