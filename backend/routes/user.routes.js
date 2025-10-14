@@ -1,14 +1,3 @@
-¡Claro! Entiendo perfectamente. El error de compilación que te aparece es porque la información del usuario en el frontend (por seguridad) no incluye el campo password. Para solucionarlo correctamente, necesitamos ajustar tanto el backend como el frontend.
-
-Aquí tienes el paso a paso y los bloques de código completos y corregidos para que tu aplicación funcione como esperas.
-
-Paso 1: Actualizar el Backend (routes/user.routes.js)
-Vamos a indicarle al frontend si un usuario tiene una contraseña guardada o no.
-
-Acción: Reemplaza el contenido de tu archivo routes/user.routes.js con este código. Se ha añadido un campo hasPassword al objeto de usuario que se envía al frontend.
-
-JavaScript
-
 // routes/user.routes.js
 const express = require('express');
 const router = express.Router();
