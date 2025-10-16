@@ -3,9 +3,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { brandConfig } from '../utils/brandConfig';
+// ✅ 1. Importar las herramientas de notificación
+import { useNotification } from '../contexts/NotificationContext';
+import toast, { Toast } from 'react-hot-toast';
 
 const CartPage: React.FC = () => {
   const { state: cartState, dispatch } = useCart();
+  // ✅ 2. Inicializar el hook de notificaciones
+  const { notify } = useNotification();
 
   const updateQuantity = (cartItemId: string, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { cartItemId, quantity } });
@@ -15,12 +20,45 @@ const CartPage: React.FC = () => {
     dispatch({ type: 'REMOVE_FROM_CART', payload: { cartItemId } });
   };
 
-  const clearCart = () => {
-    if (window.confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
-      dispatch({ type: 'CLEAR_CART' });
-    }
+  // ✅ 3. Lógica de confirmación separada
+  const confirmClearCart = () => {
+    dispatch({ type: 'CLEAR_CART' });
+    notify('Tu carrito ha sido vaciado.', 'success');
   };
-  
+
+  // ✅ 4. Función 'clearCart' actualizada para usar la notificación personalizada
+  const clearCart = () => {
+    notify(
+      (t: Toast) => (
+        <div className="text-white p-2">
+          <p className="font-bold mb-2">¿Vaciar el carrito?</p>
+          <p className="text-sm text-gray-400 mb-4">Todos los productos serán eliminados.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                confirmClearCart();
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              Sí, Vaciar
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      'info',
+      {
+        duration: 6000,
+      }
+    );
+  };
+
   const subtotal = cartState.total;
   const discount = subtotal * (brandConfig.business.discountPercentage || 0.10);
   const shippingCost = subtotal >= brandConfig.business.freeShippingThreshold
@@ -30,7 +68,6 @@ const CartPage: React.FC = () => {
 
   if (cartState.items.length === 0) {
     return (
-        // ✅ CORRECCIÓN: Se eliminó la clase `min-h-[calc(...)]` de aquí
         <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 text-white">
           <div className="container mx-auto px-6">
             <div className="max-w-md mx-auto text-center">
@@ -68,7 +105,6 @@ const CartPage: React.FC = () => {
   }
 
   return (
-    // ✅ CORRECCIÓN: Se eliminó la clase `min-h-[calc(...)]` de aquí
     <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-12">
       <div className="container mx-auto px-6">
         <div className="mb-12">

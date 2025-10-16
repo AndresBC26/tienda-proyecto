@@ -16,7 +16,7 @@ export const brandConfig = {
   // INFORMACIÓN DE CONTACTO
   contact: {
     email: 'eleganciaurban7@gmil.com', // Email de la tienda
-    phone: '+57 (302) 630-2021', // Teléfono de la tienda
+    phone: '+57 (320) 366-4711', // Teléfono de la tienda
     whatsapp: '+573203664711', // WhatsApp sin espacios ni símbolos
     address: {
       street: 'Avenida Siempre Viva #12-34',

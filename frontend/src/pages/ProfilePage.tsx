@@ -225,7 +225,7 @@ const ProfilePage: React.FC = () => {
 
             {/* Métodos de Inicio de Sesión */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <h2 className="text-2xl font-bold text-white mb-6">Métodos de Inicio de Sesión</h2>
+              <h2 className="text-2xl font-bold text-white mb-6">Método de Inicio de Sesión</h2>
               
               {/* ✅ MEJORA FINAL: Se muestra solo si el usuario tiene una contraseña local */}
               {user.hasPassword && (

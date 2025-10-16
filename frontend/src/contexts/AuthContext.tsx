@@ -33,11 +33,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const API_URL = process.env.REACT_APP_API_URL;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // ✅ INICIO DE LA CORRECCIÓN: ESTADO INICIAL OPTIMISTA
+  // Leemos el token de forma síncrona al inicio.
+  // Si existe, asumimos que el usuario ESTÁ autenticado provisionalmente.
   const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
+    isAuthenticated: !!localStorage.getItem('token'), // <-- CAMBIO CLAVE
     user: null,
-    loading: true, // Inicia en 'true' para mostrar carga mientras se verifica la sesión
+    loading: true, 
   });
+  // ✅ FIN DE LA CORRECCIÓN
+
   const [cartDispatch, setCartDispatch] = useState<React.Dispatch<any> | null>(null);
 
   const authenticateUser = (token: string, user: UserData) => {
@@ -45,9 +50,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthState({ isAuthenticated: true, user: user, loading: false });
   };
 
-  // =================================================================================
-  // =====      ✅ MEJORA CLAVE: LÓGICA PARA VERIFICAR Y RESTAURAR LA SESIÓN      =====
-  // =================================================================================
+  // Este useEffect ahora verifica el token en segundo plano para confirmar
+  // el estado optimista o corregirlo si el token es inválido.
   useEffect(() => {
     const checkSession = async () => {
       const token = localStorage.getItem('token');
@@ -64,10 +68,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
           if (res.ok) {
             const user = await res.json();
-            // Restaura la sesión con los datos más recientes del backend
+            // La sesión es válida, actualizamos los datos del usuario y confirmamos.
             authenticateUser(token, user);
           } else {
-            // Si el token es inválido o expiró, se limpia todo
+            // El token es inválido, cerramos la sesión.
             localStorage.removeItem('token');
             setAuthState({ isAuthenticated: false, user: null, loading: false });
           }
@@ -77,8 +81,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setAuthState({ isAuthenticated: false, user: null, loading: false });
         }
       } else {
-        // Si no hay token, simplemente se termina la carga
-        setAuthState(prevState => ({ ...prevState, loading: false }));
+        // Si no hay token, no hay nada que verificar. Terminamos la carga.
+        setAuthState({ isAuthenticated: false, user: null, loading: false });
       }
     };
 

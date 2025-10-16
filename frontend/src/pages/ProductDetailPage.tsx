@@ -129,6 +129,17 @@ const ProductDetailPage: React.FC = () => {
         setSelectedSize('');
         setQuantity(1);
     };
+    
+    // ================================================================
+    // ===== ✅ INICIO DE LA CORRECCIÓN: Función para cambiar talla =====
+    // ================================================================
+    const handleSizeSelect = (size: string) => {
+        setSelectedSize(size);
+        setQuantity(1); // Se reinicia la cantidad a 1
+    };
+    // ================================================================
+    // ===== ✅ FIN DE LA CORRECCIÓN ===================================
+    // ================================================================
 
     const selectedSizeData = selectedColor?.sizes.find((s: Size) => s.size === selectedSize);
     const maxQuantityForSelection = selectedSizeData?.stock || 0;
@@ -265,7 +276,6 @@ const ProductDetailPage: React.FC = () => {
 
 
     return (
-        // ✅ CORRECCIÓN DEFINITIVA: Se ha eliminado `min-h-screen` de esta línea.
         <div className="bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] text-gray-300 pt-20">
             <div className="container mx-auto px-4 sm:px-6 py-8">
                 <div className="grid lg:grid-cols-2 gap-12">
@@ -363,7 +373,7 @@ const ProductDetailPage: React.FC = () => {
                                     {selectedColor?.sizes.map((s) => (
                                         <button 
                                             key={s.size} 
-                                            onClick={() => setSelectedSize(s.size)} 
+                                            onClick={() => handleSizeSelect(s.size)} 
                                             className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${selectedSize === s.size ? 'bg-[#60caba] text-black border-[#60caba]' : 'border-gray-600 text-gray-300 hover:border-white'} ${s.stock === 0 ? 'opacity-50 line-through cursor-not-allowed' : ''}`} 
                                             disabled={s.stock === 0}>
                                             {s.size}

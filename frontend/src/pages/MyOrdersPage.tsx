@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Loading from '../components/common/Loading';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotification } from '../contexts/NotificationContext'; // Importar hook de notificación
+import { useNotification } from '../contexts/NotificationContext';
+import toast, { Toast } from 'react-hot-toast'; // Importar toast
 
+// Las interfaces no cambian
 interface Order {
   _id: string;
   products: { product: { _id: string; name: string; image?: string; variants?: { images: string[] }[] }; quantity: number; selectedSize: string }[];
@@ -18,8 +20,9 @@ const MyOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { notify } = useNotification(); // Inicializar hook de notificación
+  const { notify } = useNotification();
 
+  // El useEffect para cargar los pedidos no cambia
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user) return;
@@ -40,11 +43,8 @@ const MyOrdersPage: React.FC = () => {
     fetchOrders();
   }, [user]);
 
-  // ✅ NUEVA FUNCIÓN: Maneja la cancelación del pedido
-  const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm('¿Estás seguro de que quieres cancelar este pedido? Esta acción no se puede deshacer.')) {
-      return;
-    }
+  // Esta función contiene la lógica de borrado real
+  const confirmCancelOrder = async (orderId: string) => {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -53,7 +53,6 @@ const MyOrdersPage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Actualiza la lista de pedidos en la pantalla sin recargar la página
       setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId));
       notify('Pedido cancelado exitosamente.', 'success');
     } catch (error: any) {
@@ -62,6 +61,40 @@ const MyOrdersPage: React.FC = () => {
     }
   };
 
+  // ✅ FUNCIÓN MODIFICADA: Ahora usa la notificación personalizada
+  const handleCancelOrder = (orderId: string) => {
+    notify(
+      (t: Toast) => (
+        <div className="text-white p-2">
+          <p className="font-bold mb-2">¿Confirmas la cancelación?</p>
+          <p className="text-sm text-gray-400 mb-4">Esta acción no se puede deshacer.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                confirmCancelOrder(orderId);
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              Sí, Cancelar
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      ),
+      'info',
+      {
+        duration: 6000, // Le damos más tiempo al usuario para decidir
+      }
+    );
+  };
+  
+  // El resto del componente no cambia
   const getStatusChip = (status: Order['status']) => {
     switch (status) {
       case 'approved': return 'bg-green-500/20 text-green-300';
@@ -72,9 +105,7 @@ const MyOrdersPage: React.FC = () => {
     }
   };
 
-  const statusText = {
-    approved: 'Aprobado', in_process: 'En Proceso', pending: 'Pendiente', rejected: 'Rechazado'
-  };
+  const statusText = { approved: 'Aprobado', in_process: 'En Proceso', pending: 'Pendiente', rejected: 'Rechazado' };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b0b0b] via-[#151515] to-[#0b0b0b] py-20 text-white">
@@ -109,7 +140,6 @@ const MyOrdersPage: React.FC = () => {
                     <p className="font-semibold text-gray-200">{new Date(order.createdAt).toLocaleDateString('es-CO')}</p>
                   </div>
                 </div>
-                {/* ✅ SECCIÓN MODIFICADA PARA AÑADIR EL BOTÓN */}
                 <div className="flex justify-between items-center mb-4">
                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusChip(order.status)}`}>
                      {statusText[order.status]}

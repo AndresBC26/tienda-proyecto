@@ -16,6 +16,16 @@ interface ShippingAddress {
   country: string;
 }
 
+// ✅ INICIO DE LA MODIFICACIÓN: Lista completa de departamentos
+const colombianDepartments = [
+  "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bolívar", "Boyacá", "Caldas", "Caquetá",
+  "Casanare", "Cauca", "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
+  "Huila", "La Guajira", "Magdalena", "Meta", "Nariño", "Norte de Santander", "Putumayo",
+  "Quindío", "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
+  "Valle del Cauca", "Vaupés", "Vichada"
+];
+// ✅ FIN DE LA MODIFICACIÓN
+
 const CheckoutPage: React.FC = () => {
   const { state: cartState } = useCart();
   const navigate = useNavigate();
@@ -150,7 +160,6 @@ const CheckoutPage: React.FC = () => {
     return null; 
   }
 
-  // ===== INICIO DE LA LÓGICA DE ENVÍO Y DESCUENTO =====
   const subtotal = cartState.total;
   const discount = subtotal * (brandConfig.business.discountPercentage || 0.10);
   
@@ -159,7 +168,6 @@ const CheckoutPage: React.FC = () => {
     : brandConfig.business.shippingCost;
 
   const total = subtotal - discount + shippingCost;
-  // ===== FIN DE LA LÓGICA =====
 
   return (
     <Layout>
@@ -270,6 +278,7 @@ const CheckoutPage: React.FC = () => {
                     />
                   </div>
                   <div>
+                    {/* ✅ INICIO DE LA MODIFICACIÓN: Select dinámico */}
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Departamento *
                     </label>
@@ -281,13 +290,11 @@ const CheckoutPage: React.FC = () => {
                       required
                     >
                       <option value="">Selecciona tu departamento</option>
-                      <option value="Cundinamarca">Cundinamarca</option>
-                      <option value="Antioquia">Antioquia</option>
-                      <option value="Valle del Cauca">Valle del Cauca</option>
-                      <option value="Atlántico">Atlántico</option>
-                      <option value="Santander">Santander</option>
-                      <option value="Bolívar">Bolívar</option>
+                      {colombianDepartments.map(dep => (
+                        <option key={dep} value={dep}>{dep}</option>
+                      ))}
                     </select>
+                    {/* ✅ FIN DE LA MODIFICACIÓN */}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">

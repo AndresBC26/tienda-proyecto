@@ -26,15 +26,15 @@ router.post('/create-preference', async (req, res) => {
     
     const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     
-    // ===== PORCENTAJE DE DESCUENTO CORREGIDO AL 10% =====
-    const discountPercentage = 0.10; 
-    const discountAmount = subtotal * discountPercentage;
-
-    // LÓGICA DE ENVÍO EN EL BACKEND
+    // ================================================================
+    // ===== ✅ INICIO DE LA CORRECCIÓN: LÓGICA DE DESCUENTO ELIMINADA =====
+    // ================================================================
+    // La variable 'discountAmount' se elimina porque el subtotal ya viene con el descuento.
+    
     const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
-    const finalTotal = subtotal - discountAmount + shippingCost;
+    const finalTotal = subtotal + shippingCost; // El total ahora es solo subtotal + envío.
 
-    console.log(`💰 Subtotal: ${subtotal}, Descuento: ${discountAmount}, Envío: ${shippingCost}, Total Final: ${finalTotal}`);
+    console.log(`💰 Subtotal: ${subtotal}, Envío: ${shippingCost}, Total Final: ${finalTotal}`);
     
     const newOrder = new Order({
       user: userId,
@@ -43,10 +43,14 @@ router.post('/create-preference', async (req, res) => {
         quantity: item.quantity,
         selectedSize: item.selectedSize,
       })),
-      total: finalTotal, // Usamos el total final que incluye el envío
+      total: finalTotal, 
       shippingAddress,
       status: 'pending',
     });
+    // ================================================================
+    // ===== ✅ FIN DE LA CORRECCIÓN ===================================
+    // ================================================================
+
     const savedOrder = await newOrder.save();
     console.log('💾 Orden guardada con ID:', savedOrder._id, 'y Total:', finalTotal);
 
@@ -60,18 +64,11 @@ router.post('/create-preference', async (req, res) => {
       description: `Talla: ${item.selectedSize}`,
     }));
 
-    if (discountAmount > 0) {
-      items.push({
-        id: 'descuento-general',
-        title: 'Descuento Especial',
-        description: 'Descuento del 10% aplicado en tu compra', // Descripción corregida
-        unit_price: -discountAmount,
-        quantity: 1,
-        currency_id: 'COP',
-      });
-    }
+    // ================================================================
+    // ===== ✅ CORRECCIÓN: Se elimina el 'push' del descuento      =====
+    // ================================================================
+    // El bloque 'if (discountAmount > 0)' se ha eliminado completamente.
 
-    // AÑADIR EL ENVÍO COMO UN ÍTEM PARA MERCADO PAGO
     if (shippingCost > 0) {
         items.push({
             id: 'costo-envio',
@@ -92,9 +89,9 @@ router.post('/create-preference', async (req, res) => {
       items: items,
       external_reference: savedOrder._id.toString(),
       back_urls: {
-        success: `${frontendUrl}/payment-success?order_id=${savedOrder._id}`,
-        failure: `${frontendUrl}/payment-failure?order_id=${savedOrder._id}`,
-        pending: `${frontendUrl}/payment-pending?order_id=${savedOrder._id}`
+        success: `${frontendUrl}/#/payment-success?order_id=${savedOrder._id}`, // Corregido para HashRouter
+        failure: `${frontendUrl}/#/payment-failure?order_id=${savedOrder._id}`, // Corregido para HashRouter
+        pending: `${frontendUrl}/#/payment-pending?order_id=${savedOrder._id}`  // Corregido para HashRouter
       },
       notification_url: `${backendUrl}/api/payment/webhook`
     };

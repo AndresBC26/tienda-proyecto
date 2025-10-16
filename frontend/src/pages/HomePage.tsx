@@ -110,9 +110,6 @@ const FeaturedProductsCarousel: React.FC = () => {
                     >
                       Ver Producto
                     </Link>
-                    <button className="px-5 py-2.5 border-2 border-white/20 text-gray-100 font-semibold rounded-xl hover:text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300">
-                      ❤️ Favoritos
-                    </button>
                   </div>
                 </div>
               </div>

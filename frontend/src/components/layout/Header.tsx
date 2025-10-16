@@ -1,5 +1,5 @@
 // src/components/layout/Header.tsx
-import React from 'react';
+import React, { useState } from 'react'; // ✅ 1. Importar useState
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { useFavorites } from '../../contexts/FavoritesContext';
@@ -12,24 +12,26 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  
+  // ✅ 2. Añadir un estado para controlar el proceso de logout
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
+  // ✅ 3. Modificar la función handleLogout
   const handleLogout = () => {
+    // Si ya se está cerrando sesión, ignora clics adicionales
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true); // Inicia el proceso y bloquea nuevos clics
     logout();
     navigate('/');
+    // No es necesario resetear isLoggingOut a false, ya que la página redirigirá.
   };
 
   return (
     <header className="relative z-50 w-full backdrop-blur-lg bg-gradient-to-r from-[#0b0b0b]/95 via-[#151515]/90 to-[#0b0b0b]/95  shadow-lg">
-      {/* ======================================================================== */}
-      {/* =====       ✅ INICIO DE LA MODIFICACIÓN: ESPACIO AJUSTADO          ===== */}
-      {/* =====   Cambiado 'py-7' a 'py-4' para un header más compacto         ===== */}
-      {/* ======================================================================== */}
-      <div className="container mx-auto px-4 py-5"> {/* Aquí se ajustó a 'py-4' */}
-      {/* ======================================================================== */}
-      {/* =====        ✅ FIN DE LA MODIFICACIÓN: ESPACIO AJUSTADO           ===== */}
-      {/* ======================================================================== */}
+      <div className="container mx-auto px-4 py-5">
         <div className="flex items-center justify-between gap-4">
           {/* Logo y Nombre de la Tienda */}
           <div className="flex-shrink-0">
@@ -50,7 +52,7 @@ const Header: React.FC = () => {
             </Link>
           </div>
 
-          {/* --- Acciones para DESKTOP (Sin cambios) --- */}
+          {/* --- Acciones para DESKTOP --- */}
           <div className="hidden lg:flex items-center gap-4">
             <nav className="flex items-center space-x-2">
               {[
@@ -81,7 +83,12 @@ const Header: React.FC = () => {
                   <Link to="/profile" className="p-2 text-gray-200 hover:text-white transition" title="Mi Cuenta">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                   </Link>
-                  <div onClick={handleLogout} className="p-2 transition cursor-pointer text-gray-200 hover:text-red-400" title="Cerrar Sesión">
+                  {/* ✅ 4. Desactivar el botón visualmente si se está cerrando sesión */}
+                  <div 
+                    onClick={handleLogout} 
+                    className={`p-2 transition cursor-pointer ${isLoggingOut ? 'text-gray-500 cursor-not-allowed' : 'text-gray-200 hover:text-red-400'}`} 
+                    title="Cerrar Sesión"
+                  >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                   </div>
                 </div>
@@ -168,7 +175,7 @@ const Header: React.FC = () => {
               </Link>
               <div
                 onClick={handleLogout}
-                className="flex flex-col items-center px-3 py-2 rounded-xl min-w-0 flex-shrink-0 transition-all duration-200 cursor-pointer text-gray-200 hover:text-red-500 hover:bg-white/10"
+                className={`flex flex-col items-center px-3 py-2 rounded-xl min-w-0 flex-shrink-0 transition-all duration-200 cursor-pointer ${isLoggingOut ? 'text-gray-500' : 'text-gray-200 hover:text-red-500 hover:bg-white/10'}`}
               >
                 <span className="text-lg mb-1">🚪</span>
                 <span className="text-xs font-medium whitespace-nowrap">Salir</span>

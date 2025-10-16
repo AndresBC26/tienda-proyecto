@@ -1,18 +1,18 @@
 // src/contexts/CartContext.tsx
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
-import { Product, Variant } from '../hooks/useProducts'; // ✅ Importar Variant
+import { Product } from '../hooks/useProducts';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
 
 const API_URL = `${process.env.REACT_APP_API_URL}/api`;
 
-// --- ✅ [MEJORA] CartItem ahora incluye las propiedades de la variante ---
+// --- Interfaces (sin cambios) ---
 export interface CartItem extends Product {
   quantity: number;
   selectedSize: string;
-  selectedColor: string; // Color seleccionado
-  image: string;         // Imagen de la variante específica
-  cartItemId: string;    // ID único para la combinación producto-color-talla
+  selectedColor: string;
+  image: string;
+  cartItemId: string;
 }
 
 interface CartState {
@@ -21,7 +21,6 @@ interface CartState {
   itemCount: number;
 }
 
-// --- ✅ [MEJORA] La acción de añadir al carrito ahora requiere más detalles ---
 type CartAction =
   | { type: 'SET_CART'; payload: CartItem[] }
   | { type: 'ADD_PRODUCTS_TO_CART'; payload: { product: Product; quantity: number; size: string; color: string; image: string } }
@@ -37,6 +36,7 @@ const CartContext = createContext<
   | undefined
 >(undefined);
 
+// --- Reducer (sin cambios) ---
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   let newItems: CartItem[] = [...state.items];
   switch (action.type) {
@@ -44,9 +44,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       newItems = action.payload;
       break;
     case 'ADD_PRODUCTS_TO_CART': {
-      // --- ✅ [CORRECCIÓN] Lógica adaptada para manejar variantes de color ---
       const { product, quantity, size, color, image } = action.payload;
-      // El ID único ahora incluye el color para diferenciar, ej: "producto1-Rojo-M"
       const cartItemId = `${product._id}-${color}-${size}`;
       const existingItem = state.items.find(item => item.cartItemId === cartItemId);
       
@@ -76,7 +74,6 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         const itemToUpdate = state.items.find(item => item.cartItemId === cartItemId);
         if (!itemToUpdate) return state;
 
-        // --- ✅ [CORRECCIÓN] Busca el stock basado en la variante correcta ---
         const variant = itemToUpdate.variants.find(v => v.colorName === itemToUpdate.selectedColor);
         const sizeInfo = variant?.sizes.find(s => s.size === itemToUpdate.selectedSize);
         const availableStock = sizeInfo ? sizeInfo.stock : 0;
@@ -107,9 +104,28 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   return newState;
 };
 
+// ✅ [NUEVO] Función para inicializar el estado del carrito
+const initializeState = (): CartState => {
+  try {
+    // Intentamos leer el carrito de invitados desde localStorage.
+    const localGuestCart = localStorage.getItem('guestCart');
+    if (localGuestCart) {
+      console.log("🛒 Carrito de invitado encontrado en localStorage.");
+      return JSON.parse(localGuestCart);
+    }
+  } catch (error) {
+    console.error("Error al leer el carrito de localStorage:", error);
+    localStorage.removeItem('guestCart'); // Limpiamos si hay datos corruptos.
+  }
+  // Si no hay nada, devolvemos un estado vacío.
+  return { items: [], total: 0, itemCount: 0 };
+};
+
+
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { isAuthenticated, user, setCartDispatch } = useAuth();
-    const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0, itemCount: 0 });
+    // ✅ [MODIFICADO] Usamos nuestra función 'initializeState' para el estado inicial.
+    const [state, dispatch] = useReducer(cartReducer, initializeState());
   
     useEffect(() => {
       if (setCartDispatch) {
@@ -117,14 +133,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }, [setCartDispatch]);
   
-    // Nota: Las funciones `fetchCart` y `syncCart` necesitarán ajustes en el backend
-    // para poder guardar y recuperar `selectedColor` y la `image` de la variante.
-    // Por ahora, la lógica del frontend está corregida.
-  
     useEffect(() => {
       const fetchCart = async () => {
         if (isAuthenticated && user) {
           try {
+            // ✅ [NUEVO] Si el usuario se autentica, limpiamos el carrito de invitado.
+            localStorage.removeItem('guestCart');
+            console.log("Usuario autenticado. Limpiando carrito de invitado de localStorage.");
+
             const token = localStorage.getItem('token');
             const res = await axios.get(`${API_URL}/users/${user._id}/cart`, {
               headers: { 'Authorization': `Bearer ${token}` }
@@ -133,8 +149,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 ...item.product,
                 quantity: item.quantity,
                 selectedSize: item.selectedSize,
-                selectedColor: item.selectedColor || '', // Añadir fallback por si datos antiguos no lo tienen
-                image: item.image || item.product?.variants[0]?.images[0], // Añadir fallback
+                selectedColor: item.selectedColor || '',
+                image: item.image || item.product?.variants[0]?.images[0],
                 cartItemId: `${item.product._id}-${item.selectedColor}-${item.selectedSize}`
             }));
             dispatch({ type: 'SET_CART', payload: cartFromDB });
@@ -142,7 +158,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error("Error al cargar el carrito del usuario:", error);
           }
         } else {
-          dispatch({ type: 'CLEAR_CART' });
+            // Si el usuario cierra sesión, el estado se limpiará y el efecto de abajo guardará el estado vacío en localStorage.
         }
       };
       fetchCart();
@@ -157,8 +173,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                       product: item._id,
                       quantity: item.quantity,
                       selectedSize: item.selectedSize,
-                      selectedColor: item.selectedColor, // Enviar color
-                      image: item.image, // Enviar imagen específica
+                      selectedColor: item.selectedColor,
+                      image: item.image,
                   }));
   
                   await axios.put(`${API_URL}/users/${user._id}/cart`, 
@@ -170,11 +186,23 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               }
           }
       };
-      // Sincroniza solo si el estado ha cambiado para evitar llamadas innecesarias
-      if (state.items.length > 0 || (isAuthenticated && state.items.length === 0)) {
-          syncCart();
+
+      if (isAuthenticated) {
+        syncCart();
       }
     }, [state.items, isAuthenticated, user]);
+
+    // ✅ [NUEVO] useEffect para guardar el carrito en localStorage para invitados.
+    useEffect(() => {
+        // Este efecto se ejecuta solo si el usuario NO está autenticado.
+        if (!isAuthenticated) {
+            try {
+                localStorage.setItem('guestCart', JSON.stringify(state));
+            } catch (error) {
+                console.error("Error al guardar el carrito de invitado en localStorage:", error);
+            }
+        }
+    }, [state, isAuthenticated]); // Se ejecuta cada vez que el estado del carrito o la autenticación cambian.
   
   
     return (
