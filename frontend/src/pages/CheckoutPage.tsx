@@ -16,7 +16,6 @@ interface ShippingAddress {
   country: string;
 }
 
-// ✅ INICIO DE LA MODIFICACIÓN: Lista completa de departamentos
 const colombianDepartments = [
   "Amazonas", "Antioquia", "Arauca", "Atlántico", "Bolívar", "Boyacá", "Caldas", "Caquetá",
   "Casanare", "Cauca", "Cesar", "Chocó", "Córdoba", "Cundinamarca", "Guainía", "Guaviare",
@@ -24,7 +23,6 @@ const colombianDepartments = [
   "Quindío", "Risaralda", "San Andrés y Providencia", "Santander", "Sucre", "Tolima",
   "Valle del Cauca", "Vaupés", "Vichada"
 ];
-// ✅ FIN DE LA MODIFICACIÓN
 
 const CheckoutPage: React.FC = () => {
   const { state: cartState } = useCart();
@@ -94,79 +92,83 @@ const CheckoutPage: React.FC = () => {
   };
 
   const handleProcessPayment = async () => {
-  setError('');
+    setError('');
 
-  if (!validateForm()) {
-    return;
-  }
+    if (!validateForm()) {
+      return;
+    }
 
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const paymentData = {
-      cartItems: cartState.items,
-      userId: localStorage.getItem('userId') || 'guest',
-      shippingAddress: shippingAddress,
-    };
-    
-    const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    const fullUrl = `${backendUrl}/api/payment/create-preference`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); 
-
-    const response = await fetch(fullUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    let data;
     try {
-      data = await response.json();
-    } catch (jsonError) {
-      const textResponse = await response.text();
-      throw new Error('Respuesta del servidor no es JSON válido');
-    }
+      const paymentData = {
+        cartItems: cartState.items,
+        userId: localStorage.getItem('userId') || 'guest',
+        shippingAddress: shippingAddress,
+      };
+      
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const fullUrl = `${backendUrl}/api/payment/create-preference`;
 
-    if (!response.ok) {
-      throw new Error(data.message || `Error HTTP ${response.status}: ${data.details || 'Error al procesar el pago'}`);
-    }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); 
 
-    if (data.id) {
-      window.location.href = `https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=${data.id}`;
-    } else {
-      throw new Error('No se recibió el ID de la preferencia en la respuesta');
+      const response = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        throw new Error('Respuesta del servidor no es JSON válido');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || `Error HTTP ${response.status}: ${data.details || 'Error al procesar el pago'}`);
+      }
+
+      if (data.id) {
+        window.location.href = `https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=${data.id}`;
+      } else {
+        throw new Error('No se recibió el ID de la preferencia en la respuesta');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        setError('La petición tardó demasiado. Verifica tu conexión e intenta nuevamente.');
+      } else if (error instanceof Error && error.message.includes('fetch')) {
+        setError('No se puede conectar con el servidor. Verifica que el backend esté corriendo.');
+      } else {
+        setError(error instanceof Error ? error.message : 'Error al procesar el pago');
+      }
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      setError('La petición tardó demasiado. Verifica tu conexión e intenta nuevamente.');
-    } else if (error instanceof Error && error.message.includes('fetch')) {
-      setError('No se puede conectar con el servidor. Verifica que el backend esté corriendo.');
-    } else {
-      setError(error instanceof Error ? error.message : 'Error al procesar el pago');
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   if (cartState.items.length === 0) {
     return null; 
   }
 
+  // ================================================================
+  // =====         ✅ INICIO DE LA CORRECCIÓN DEFINITIVA          =====
+  // ================================================================
   const subtotal = cartState.total;
-  
   const shippingCost = subtotal >= brandConfig.business.freeShippingThreshold
     ? 0
     : brandConfig.business.shippingCost;
 
   const total = subtotal + shippingCost;
+  // ================================================================
+  // =====          FIN DE LA CORRECCIÓN DEFINITIVA               =====
+  // ================================================================
 
   return (
     <Layout>
@@ -277,7 +279,6 @@ const CheckoutPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    {/* ✅ INICIO DE LA MODIFICACIÓN: Select dinámico */}
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Departamento *
                     </label>
@@ -293,7 +294,6 @@ const CheckoutPage: React.FC = () => {
                         <option key={dep} value={dep}>{dep}</option>
                       ))}
                     </select>
-                    {/* ✅ FIN DE LA MODIFICACIÓN */}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -364,6 +364,8 @@ const CheckoutPage: React.FC = () => {
                       <span className="font-semibold text-gray-100">${shippingCost.toLocaleString()}</span>
                     )}                          
                   </div>
+                  
+                  {/* LÍNEA DE DESCUENTO ELIMINADA */}
                   
                   <hr className="border-white/10" />
                   <div className="flex justify-between items-center">

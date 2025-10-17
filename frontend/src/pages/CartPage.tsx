@@ -3,13 +3,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { brandConfig } from '../utils/brandConfig';
-// ✅ 1. Importar las herramientas de notificación
 import { useNotification } from '../contexts/NotificationContext';
 import toast, { Toast } from 'react-hot-toast';
 
 const CartPage: React.FC = () => {
   const { state: cartState, dispatch } = useCart();
-  // ✅ 2. Inicializar el hook de notificaciones
   const { notify } = useNotification();
 
   const updateQuantity = (cartItemId: string, quantity: number) => {
@@ -20,13 +18,11 @@ const CartPage: React.FC = () => {
     dispatch({ type: 'REMOVE_FROM_CART', payload: { cartItemId } });
   };
 
-  // ✅ 3. Lógica de confirmación separada
   const confirmClearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
     notify('Tu carrito ha sido vaciado.', 'success');
   };
 
-  // ✅ 4. Función 'clearCart' actualizada para usar la notificación personalizada
   const clearCart = () => {
     notify(
       (t: Toast) => (
@@ -59,11 +55,17 @@ const CartPage: React.FC = () => {
     );
   };
 
+  // ================================================================
+  // =====         ✅ INICIO DE LA CORRECCIÓN DEFINITIVA          =====
+  // ================================================================
   const subtotal = cartState.total;
   const shippingCost = subtotal >= brandConfig.business.freeShippingThreshold
     ? 0
     : brandConfig.business.shippingCost;
   const finalTotal = subtotal + shippingCost;
+  // ================================================================
+  // =====          FIN DE LA CORRECCIÓN DEFINITIVA               =====
+  // ================================================================
 
   if (cartState.items.length === 0) {
     return (
@@ -256,6 +258,8 @@ const CartPage: React.FC = () => {
                     <span className="font-semibold text-gray-100">${shippingCost.toLocaleString()}</span>
                   )}
                 </div>
+                
+                {/* LÍNEA DE DESCUENTO ELIMINADA */}
                 
                 <hr className="border-white/10" />
                 <div className="flex justify-between items-center py-2">
