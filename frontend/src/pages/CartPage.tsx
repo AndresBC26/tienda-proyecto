@@ -60,11 +60,10 @@ const CartPage: React.FC = () => {
   };
 
   const subtotal = cartState.total;
-  const discount = subtotal * (brandConfig.business.discountPercentage || 0.10);
   const shippingCost = subtotal >= brandConfig.business.freeShippingThreshold
     ? 0
     : brandConfig.business.shippingCost;
-  const finalTotal = subtotal - discount + shippingCost;
+  const finalTotal = subtotal + shippingCost;
 
   if (cartState.items.length === 0) {
     return (
@@ -257,10 +256,7 @@ const CartPage: React.FC = () => {
                     <span className="font-semibold text-gray-100">${shippingCost.toLocaleString()}</span>
                   )}
                 </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-400">Descuentos (10%)</span>
-                  <span className="font-semibold text-[#60caba]">-${discount.toLocaleString()}</span>
-                </div>
+                
                 <hr className="border-white/10" />
                 <div className="flex justify-between items-center py-2">
                   <span className="text-xl font-bold text-gray-100">Total</span>
